@@ -1,0 +1,12 @@
+Testsuite: test.SimpleTest
+Tests run: 1, Failures: 0, Errors: 1, Time elapsed: 6.014 sec
+
+Testcase: test took 6.011 sec
+	Caused an ERROR
+null
+java.lang.NullPointerException
+	at test.SimpleTest.test(SimpleTest.java:62)
+	at org.eclipse.ant.internal.launching.remote.EclipseDefaultExecutor.executeTargets(EclipseDefaultExecutor.java:32)
+	at org.eclipse.ant.internal.launching.remote.InternalAntRunner.run(InternalAntRunner.java:424)
+	at org.eclipse.ant.internal.launching.remote.InternalAntRunner.main(InternalAntRunner.java:138)
+

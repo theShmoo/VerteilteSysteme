@@ -6,6 +6,7 @@ import proxy.ProxyCli;
 import server.FileServerCli;
 import server.IFileServerCli;
 import cli.Shell;
+import client.Client;
 import client.ClientCli;
 import client.IClientCli;
 
@@ -23,7 +24,7 @@ public class ComponentFactory {
 	 */
 	public IClientCli startClient(Config config, Shell shell) throws Exception {
 		// TODO: create a new client instance (including a Shell) and start it
-		return new ClientCli();
+		return new ClientCli(new Client(shell));
 	}
 
 	/**

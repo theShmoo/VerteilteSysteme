@@ -1,8 +1,0 @@
-Testsuite: test.ApiTest
-Tests run: 1, Failures: 0, Errors: 0, Time elapsed: 9.042 sec
-------------- Standard Output ---------------
-00_login_test.txt
-################################################################################
-------------- ---------------- ---------------
-
-Testcase: test took 9.032 sec

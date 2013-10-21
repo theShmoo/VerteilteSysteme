@@ -12,6 +12,7 @@ public class UserLoginInfo {
 	private String name;
 	private String password;
 	private long credits;
+	private boolean online;
 
 	/**
 	 * Contains information about a user account.
@@ -27,6 +28,7 @@ public class UserLoginInfo {
 		this.name = name;
 		this.password = password;
 		this.credits = credits;
+		this.online = false;
 	}
 
 	/**
@@ -60,5 +62,13 @@ public class UserLoginInfo {
 	 */
 	public void setCredits(long credits) {
 		this.credits = credits;
+	}
+	
+	public void setOnline(boolean online) {
+		this.online = online;
+	}
+	
+	public boolean isOnline() {
+		return online;
 	}
 }

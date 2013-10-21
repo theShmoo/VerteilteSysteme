@@ -1,9 +1,12 @@
 package server;
 
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -13,6 +16,7 @@ import message.request.InfoRequest;
 import message.request.UploadRequest;
 import message.request.VersionRequest;
 import message.response.MessageResponse;
+import model.FileServerInfo;
 import util.Config;
 import cli.Shell;
 
@@ -35,7 +39,7 @@ public class FileServer implements IFileServer {
 	private String directory = "";
 	private int tcpPort;
 	private int udpPort;
-	private String host = "";
+	private String proxyHost = "";
 
 	public FileServer(Shell shell) {
 		init(shell);
@@ -50,8 +54,7 @@ public class FileServer implements IFileServer {
 	private void init(Shell shell) {
 		this.shell = shell;
 		this.serverCli = new FileServerCli();
-		this.executor = Executors.newCachedThreadPool();
-
+		executor = Executors.newCachedThreadPool();
 		getServerData();
 	}
 
@@ -60,7 +63,7 @@ public class FileServer implements IFileServer {
 			this.config = new Config(name);
 			this.tcpPort = config.getInt("tcp.port");
 			this.udpPort = config.getInt("proxy.udp.port");
-			this.host = config.getString("proxy.host");
+			this.proxyHost = config.getString("proxy.host");
 			this.directory = config.getString("fileserver.dir");
 			this.alive = config.getInt("fileserver.alive");
 		} catch (NumberFormatException e) {
@@ -89,7 +92,27 @@ public class FileServer implements IFileServer {
 
 		shell.register(new FileServerCli());
 
-//		shell.run();
+		// shell.run();
+//		System.out.println(proxyHost + " " + tcpPort);
+
+//		try (Socket socket = new Socket(proxyHost, 10180);
+//				ObjectOutputStream outputStream = new ObjectOutputStream(
+//						socket.getOutputStream());) {
+//
+//			FileServerInfo data = new FileServerInfo(
+//					InetAddress.getLocalHost(), tcpPort, 0, true);
+//			outputStream.writeObject(data);
+//			System.out.println("Object sent = " + data);
+//			socket.close();
+//		} catch (UnknownHostException e) {
+//			System.err.println("Don't know about host " + proxyHost);
+//			System.exit(1);
+//		} catch (IOException e) {
+//			System.err.println("Couldn't get I/O for the connection to "
+//					+ proxyHost);
+//			e.printStackTrace();
+//			System.exit(1);
+//		}
 
 		try (DatagramSocket socket = new DatagramSocket()) {
 
@@ -98,14 +121,15 @@ public class FileServer implements IFileServer {
 
 			// send request
 			byte[] buf = aliveMessage.getBytes();
-			InetAddress address = InetAddress.getByName(host);
+			InetAddress address = InetAddress.getByName(proxyHost);
 			DatagramPacket packet = new DatagramPacket(buf, buf.length,
 					address, udpPort);
-			socket.send(packet);
 
-			socket.close();
+			new FileServerDatagramThread(packet, socket, alive).run();
+
 		} catch (IOException e) {
 			e.printStackTrace();
+			System.exit(1);
 		}
 	}
 

@@ -4,13 +4,13 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 
-public class FileServerThread implements Runnable {
+public class FileServerDatagramThread implements Runnable {
 	private DatagramPacket packet;
 	private DatagramSocket socket;
 	private long alive;
 	private boolean running;
 
-	public FileServerThread(DatagramPacket packet, DatagramSocket socket,long alive) {
+	public FileServerDatagramThread(DatagramPacket packet, DatagramSocket socket,long alive) {
 		this.packet = packet;
 		this.socket = socket;
 		this.alive = alive;

@@ -1,9 +1,12 @@
 package proxy;
 
 import java.io.IOException;
-import java.net.ServerSocket;
+import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -13,8 +16,10 @@ import message.request.DownloadTicketRequest;
 import message.request.LoginRequest;
 import message.request.UploadRequest;
 import message.response.LoginResponse;
+import message.response.LoginResponse.Type;
 import message.response.MessageResponse;
 import model.FileServerInfo;
+import model.UserInfo;
 import model.UserLoginInfo;
 import util.Config;
 import cli.Shell;
@@ -37,7 +42,7 @@ public class Proxy implements IProxy {
 	private long fsTimeout, fsCheckPeriod;
 
 	private List<UserLoginInfo> users;
-	private List<FileServerInfo> fileservers;
+	private Map<FileServerInfo, Long> fileservers;
 
 	public Proxy() {
 		init(new Shell("Proxy", System.out, System.in));
@@ -73,7 +78,7 @@ public class Proxy implements IProxy {
 				e1.printStackTrace();
 			}
 		}
-		this.fileservers = new ArrayList<FileServerInfo>();
+		this.fileservers = new HashMap<FileServerInfo, Long>();
 		this.users = getUsers();
 	}
 
@@ -122,30 +127,30 @@ public class Proxy implements IProxy {
 
 	private void run() {
 		shell.register(proxyCli);
-		shell.run();
 
-		boolean listening = true;
+		executor.execute(shell);
+		// Starting the DatagramSocket
+		executor.execute(new ProxyDatagramSocketThread(udpPort, this));
+		// Starting the ServerSocket
+		executor.execute(new ProxyServerSocketThread(tcpPort, this));
+		// Starting the Garbage Collector for the fileservers
+		executor.execute(new FileServerGarbageCollector(fileservers, fsTimeout,
+				fsCheckPeriod));
 
-		try (ServerSocket serverSocket = new ServerSocket(tcpPort)) {
-			while (listening) {
-				// Starting the DatagramSocket
-				executor.execute(new ProxyDatagramSocketThread(udpPort));
-				System.out.println("UDP running?");
-				// Starting the ServerSocket
-				executor.execute(new ProxyServerSocketThread(serverSocket
-						.accept()));
-			}
-			executor.shutdown();
-		} catch (IOException e) {
-			System.err.println("Could not listen on port " + tcpPort);
-			System.exit(-1);
-		}
 	}
 
 	@Override
 	public LoginResponse login(LoginRequest request) throws IOException {
-		// TODO implement login
-		return null;
+
+		for (UserLoginInfo u : users) {
+			if (u.getName().equals(request.getUsername())
+					&& u.getPassword().equals(request.getPassword())) {
+				u.setOnline(true);
+				return new LoginResponse(Type.SUCCESS);
+			}
+		}
+
+		return new LoginResponse(Type.WRONG_CREDENTIALS);
 	}
 
 	@Override
@@ -184,8 +189,32 @@ public class Proxy implements IProxy {
 		return null;
 	}
 
-	public List<FileServerInfo> getFileServerInfos() {
-		return fileservers;
+	public Set<FileServerInfo> getFileServerInfos() {
+		return fileservers.keySet();
+	}
+
+	public List<UserInfo> getUserInfos() {
+		List<UserInfo> userinfos = new ArrayList<UserInfo>();
+		for (UserLoginInfo u : users) {
+			userinfos.add(new UserInfo(u.getName(), u.getCredits(), u
+					.isOnline()));
+		}
+		return userinfos;
+	}
+
+	public void isAlive(int fileServerTCPPort, InetAddress adress) {
+		boolean newServer = true;
+		for (FileServerInfo f : fileservers.keySet()) {
+			if (f.getPort() == fileServerTCPPort) {
+				fileservers.put(f, System.currentTimeMillis());
+				newServer = false;
+				break;
+			}
+		}
+		if (newServer) {
+			fileservers.put(new FileServerInfo(adress, fileServerTCPPort, 0,
+					true), System.currentTimeMillis());
+		}
 	}
 
 }

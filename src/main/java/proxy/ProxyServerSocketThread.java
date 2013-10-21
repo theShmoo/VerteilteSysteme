@@ -1,40 +1,52 @@
 package proxy;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
+
+import message.request.LoginRequest;
+import message.response.LoginResponse;
 
 public class ProxyServerSocketThread implements Runnable {
 	private Socket socket = null;
-	 
-    public ProxyServerSocketThread(Socket socket) {
-        this.socket = socket;
-    }
-     
-    public void run() {
- 
-        try (
-            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-            BufferedReader in = new BufferedReader(
-                new InputStreamReader(
-                    socket.getInputStream()));
-        ) {
-            String inputLine, outputLine;
-            KnockKnockProtocol kkp = new KnockKnockProtocol();
-            outputLine = kkp.processInput(null);
-            out.println(outputLine);
- 
-            while ((inputLine = in.readLine()) != null) {
-                outputLine = kkp.processInput(inputLine);
-                out.println(outputLine);
-                if (outputLine.equals("Bye"))
-                    break;
-            }
-            socket.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+	private int tcpPort;
+	private Proxy proxy;
+	private boolean running;
+
+	public ProxyServerSocketThread(int tcpPort, Proxy proxy) {
+		this.tcpPort = tcpPort;
+		this.proxy = proxy;
+		this.running = true;
+	}
+
+	public void run() {
+
+		try (ServerSocket serverSocket = new ServerSocket(tcpPort)) {
+			while (running) {
+				socket = serverSocket.accept();
+				ObjectInputStream inStream = new ObjectInputStream(
+						socket.getInputStream());
+				ObjectOutputStream outputStream = new ObjectOutputStream(
+						socket.getOutputStream());
+
+				Object o = inStream.readObject();
+				Class<? extends Object> c = o.getClass();
+				System.out.println(c.getCanonicalName());
+
+				LoginRequest data = (LoginRequest) o;
+				System.out.println("Object received = " + data);
+				outputStream.writeObject(proxy.login(data));
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(1);
+		} catch (ClassNotFoundException e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
+
+	}
 }

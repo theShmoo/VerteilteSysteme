@@ -64,8 +64,12 @@ public class UserLoginInfo {
 		this.credits = credits;
 	}
 	
-	public void setOnline(boolean online) {
-		this.online = online;
+	public void setOnline() {
+		this.online = true;
+	}
+	
+	public void setOffline() {
+		this.online = false;
 	}
 	
 	public boolean isOnline() {

@@ -3,37 +3,41 @@ package proxy;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.UnknownHostException;
 
 import message.Response;
 import message.request.LoginRequest;
-import message.request.LogoutRequest;
+import message.response.CreditsResponse;
 import message.response.LoginResponse;
+import message.response.MessageResponse;
+import message.response.LoginResponse.Type;
 import model.RequestTO;
+import model.UserInfo;
+import model.UserLoginInfo;
 
 public class ProxyServerSocketThread implements Runnable {
 	private Socket socket = null;
-	private int tcpPort;
 	private Proxy proxy;
 	private boolean running;
+	
+	//User
+	private UserLoginInfo user;
 
-	public ProxyServerSocketThread(int tcpPort, Proxy proxy) {
-		this.tcpPort = tcpPort;
+	public ProxyServerSocketThread(Proxy proxy, Socket socket) {
 		this.proxy = proxy;
 		this.running = true;
+		this.socket = socket;
 	}
 
 	public void run() {
 
-		try (ServerSocket serverSocket = new ServerSocket(tcpPort)) {
-			socket = serverSocket.accept();
+		try {
+
 			ObjectInputStream inStream = new ObjectInputStream(
 					socket.getInputStream());
 			ObjectOutputStream outputStream = new ObjectOutputStream(
 					socket.getOutputStream());
-			
+
 			while (running) {
 				RequestTO request = (RequestTO) inStream.readObject();
 
@@ -41,16 +45,31 @@ public class ProxyServerSocketThread implements Runnable {
 
 				switch (request.getType()) {
 				case Login:
-					response = proxy.login((LoginRequest) request.getRequest());
+					LoginRequest loginRequest = (LoginRequest) request.getRequest();
+					response = proxy.login(loginRequest);
+					for (UserLoginInfo u : proxy.getUserLoginInfos()) {
+						if (u.getName().equals(loginRequest.getUsername())) {
+							user = u;
+						}
+					}
 					break;
 				case Logout:
-					response = proxy.logout();
+					if(userCheck()){
+						response = proxy.logout();
+						user.setOffline();
+					} else{
+						response = new MessageResponse("Already Logged out!");
+					}
+					break;
+				case Credits:
+					if(userCheck()){
+						response = proxy.credits();
+					}
 					break;
 				default:
 					// TODO wrong object received
 					break;
 				}
-
 				outputStream.writeObject(response);
 			}
 		} catch (IOException e) {
@@ -60,5 +79,9 @@ public class ProxyServerSocketThread implements Runnable {
 			e.printStackTrace();
 			System.exit(1);
 		}
+	}
+
+	private boolean userCheck() {
+		return user != null && user.isOnline();
 	}
 }

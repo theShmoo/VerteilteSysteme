@@ -12,8 +12,8 @@ public class ProxyDatagramSocketThread implements Runnable {
 	private int udpPort;
 	private Proxy proxy;
 
-	public ProxyDatagramSocketThread(int udpPort, Proxy proxy) {
-		this.udpPort = udpPort;
+	public ProxyDatagramSocketThread(Proxy proxy) {
+		this.udpPort = proxy.getUdpPort();
 		this.proxy = proxy;
 	}
 

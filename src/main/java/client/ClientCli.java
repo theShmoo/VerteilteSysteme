@@ -3,8 +3,10 @@ package client;
 import java.io.IOException;
 
 import message.Response;
+import message.request.CreditsRequest;
 import message.request.LoginRequest;
 import message.request.LogoutRequest;
+import message.response.CreditsResponse;
 import message.response.LoginResponse;
 import message.response.LoginResponse.Type;
 import message.response.MessageResponse;
@@ -60,8 +62,16 @@ public class ClientCli implements IClientCli {
 	 */
 	@Override
 	public Response credits() throws IOException {
-		// TODO implement !credits command
-		return null;
+
+		CreditsResponse respond = null;
+
+		if (!client.isLogin()) {
+			CreditsRequest data = new CreditsRequest();
+			RequestTO request = new RequestTO(data, RequestType.Credits);
+			respond = (CreditsResponse) client.send(request);
+		}
+
+		return respond;
 	}
 
 	/*

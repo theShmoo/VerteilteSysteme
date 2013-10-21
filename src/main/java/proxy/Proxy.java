@@ -2,6 +2,7 @@ package proxy;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -43,6 +44,8 @@ public class Proxy implements IProxy {
 
 	private List<UserLoginInfo> users;
 	private Map<FileServerInfo, Long> fileservers;
+	
+	private boolean running;
 
 	/**
 	 * Initialize a new Proxy
@@ -65,6 +68,7 @@ public class Proxy implements IProxy {
 		this.shell = shell;
 		this.proxyCli = new ProxyCli(this);
 		this.executor = Executors.newCachedThreadPool();
+		this.running=true;
 
 		getProxyData();
 	}
@@ -139,12 +143,21 @@ public class Proxy implements IProxy {
 
 		executor.execute(shell);
 		// Starting the DatagramSocket
-		executor.execute(new ProxyDatagramSocketThread(udpPort, this));
-		// Starting the ServerSocket
-		executor.execute(new ProxyServerSocketThread(tcpPort, this));
+		executor.execute(new ProxyDatagramSocketThread(this));
 		// Starting the Garbage Collector for the fileservers
 		executor.execute(new FileServerGarbageCollector(fileservers, fsTimeout,
 				fsCheckPeriod));
+		try (ServerSocket serverSocket = new ServerSocket(tcpPort)) {
+			while(running){
+				executor.execute(new ProxyServerSocketThread(this,serverSocket.accept()));
+			}
+		}
+		// Starting the ServerSocket
+		catch (IOException e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
+		
 
 	}
 
@@ -154,7 +167,7 @@ public class Proxy implements IProxy {
 		for (UserLoginInfo u : users) {
 			if (u.getName().equals(request.getUsername())
 					&& u.getPassword().equals(request.getPassword())) {
-				u.setOnline(true);
+				u.setOnline();
 				return new LoginResponse(Type.SUCCESS);
 			}
 		}
@@ -194,7 +207,7 @@ public class Proxy implements IProxy {
 
 	@Override
 	public MessageResponse logout() throws IOException {
-		return new MessageResponse("Logged out");
+		return new MessageResponse("Logged out!");
 	}
 
 	/**
@@ -218,6 +231,15 @@ public class Proxy implements IProxy {
 					.isOnline()));
 		}
 		return userinfos;
+	}
+	
+	/**
+	 * Returns all users that are registered on the Proxy and their status
+	 * 
+	 * @return all users
+	 */
+	public List<UserLoginInfo> getUserLoginInfos() {
+		return users;
 	}
 
 	/**
@@ -243,6 +265,14 @@ public class Proxy implements IProxy {
 			fileservers.put(new FileServerInfo(adress, fileServerTCPPort, 0,
 					true), System.currentTimeMillis());
 		}
+	}
+
+	public int getTcpPort() {
+		return tcpPort;
+	}
+
+	public int getUdpPort() {
+		return udpPort;
 	}
 
 }

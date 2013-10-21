@@ -28,30 +28,29 @@ public class ProxyServerSocketThread implements Runnable {
 	public void run() {
 
 		try (ServerSocket serverSocket = new ServerSocket(tcpPort)) {
+			socket = serverSocket.accept();
+			ObjectInputStream inStream = new ObjectInputStream(
+					socket.getInputStream());
+			ObjectOutputStream outputStream = new ObjectOutputStream(
+					socket.getOutputStream());
+			
 			while (running) {
-				socket = serverSocket.accept();
-				ObjectInputStream inStream = new ObjectInputStream(
-						socket.getInputStream());
-				ObjectOutputStream outputStream = new ObjectOutputStream(
-						socket.getOutputStream());
-
 				RequestTO request = (RequestTO) inStream.readObject();
 
 				Response response = null;
-				
+
 				switch (request.getType()) {
 				case Login:
-					response = proxy.login((LoginRequest) request
-							.getRequest());
+					response = proxy.login((LoginRequest) request.getRequest());
 					break;
 				case Logout:
 					response = proxy.logout();
 					break;
 				default:
-					//TODO wrong object received
+					// TODO wrong object received
 					break;
 				}
-				
+
 				outputStream.writeObject(response);
 			}
 		} catch (IOException e) {
@@ -61,6 +60,5 @@ public class ProxyServerSocketThread implements Runnable {
 			e.printStackTrace();
 			System.exit(1);
 		}
-
 	}
 }

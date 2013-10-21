@@ -21,6 +21,10 @@ public class ProxyCli implements IProxyCli {
 
 	private Proxy proxy;
 
+	/**
+	 * Initialize a new Proxy Command Line Interface
+	 * @param proxy the proxy
+	 */
 	public ProxyCli(Proxy proxy) {
 		this.proxy = proxy;
 	}

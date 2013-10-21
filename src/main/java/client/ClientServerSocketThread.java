@@ -6,8 +6,8 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
-import message.Request;
 import message.Response;
+import model.RequestTO;
 
 public class ClientServerSocketThread implements Runnable {
 
@@ -28,9 +28,12 @@ public class ClientServerSocketThread implements Runnable {
 
 	@Override
 	public void run() {
-		try (Socket socket = new Socket(host, port);) {
-			outputStream = new ObjectOutputStream(socket.getOutputStream());
-			inStream = new ObjectInputStream(socket.getInputStream());
+		try {
+			socket = new Socket(host, port);
+			outputStream = new ObjectOutputStream(
+					socket.getOutputStream());
+			inStream = new ObjectInputStream(
+					socket.getInputStream());
 		} catch (UnknownHostException e) {
 			System.err.println("Don't know about host " + host);
 			System.exit(1);
@@ -45,9 +48,10 @@ public class ClientServerSocketThread implements Runnable {
 	/**
 	 * @pre The connection is established
 	 * @param request
-	 * @return
+	 *            the request transfer object
+	 * @return the response
 	 */
-	public synchronized Response send(Request request) {
+	public synchronized Response send(RequestTO request) {
 		Response response = null;
 		try {
 			outputStream.writeObject(request);

@@ -1,10 +1,6 @@
 package client;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -54,13 +50,14 @@ public class Client implements IClient {
 	}
 
 	private void init(Shell shell) {
+		getClientData();
+
 		this.shell = shell;
 		this.clientCli = new ClientCli(this);
 		this.login = false;
 		this.executor = Executors.newCachedThreadPool();
 		this.clientThread = new ClientServerSocketThread(this);
 
-		getClientData();
 	}
 
 	private void getClientData() {
@@ -134,64 +131,7 @@ public class Client implements IClient {
 	 * @return the {@link Response} Object
 	 */
 	public Response send(RequestTO request) {
-		Response respond = null;
-		try (Socket socket = new Socket(proxyHost, tcpPort);
-				ObjectOutputStream outputStream = new ObjectOutputStream(
-						socket.getOutputStream());
-				ObjectInputStream inStream = new ObjectInputStream(
-						socket.getInputStream());) {
-			outputStream.writeObject(request);
-			System.out.println("Object sent = " + request);
-			respond = (Response) inStream.readObject();
-			System.out.println("Object received = " + respond);
-			socket.close();
-		} catch (UnknownHostException e) {
-			System.err.println("Don't know about host " + proxyHost);
-			System.exit(1);
-		} catch (IOException e) {
-			System.err.println("Couldn't get I/O for the connection to "
-					+ proxyHost);
-			e.printStackTrace();
-			System.exit(1);
-		} catch (ClassNotFoundException e) {
-			System.err
-					.println("The received object is unknown to " + proxyHost);
-			e.printStackTrace();
-			System.exit(1);
-		}
-		return respond;
-	}
-
-	/**
-	 * Receive a data package from the {@link Proxy}
-	 * 
-	 * @return the {@link Response} Object
-	 */
-	public Response receive() {
-		Response respond = null;
-		try (Socket socket = new Socket(proxyHost, tcpPort);
-				ObjectInputStream inStream = new ObjectInputStream(
-						socket.getInputStream());) {
-
-			respond = (Response) inStream.readObject();
-			System.out.println("Object received = " + respond);
-			socket.close();
-			return respond;
-		} catch (UnknownHostException e) {
-			System.err.println("Don't know about host " + proxyHost);
-			System.exit(1);
-		} catch (IOException e) {
-			System.err.println("Couldn't get I/O for the connection to "
-					+ proxyHost);
-			e.printStackTrace();
-			System.exit(1);
-		} catch (ClassNotFoundException e) {
-			System.err
-					.println("The received object is unknown to " + proxyHost);
-			e.printStackTrace();
-			System.exit(1);
-		}
-		return respond;
+		return clientThread.send(request);
 	}
 
 	/**

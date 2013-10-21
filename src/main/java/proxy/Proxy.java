@@ -194,8 +194,7 @@ public class Proxy implements IProxy {
 
 	@Override
 	public MessageResponse logout() throws IOException {
-		// TODO implement logout
-		return null;
+		return new MessageResponse("Logged out");
 	}
 
 	/**

@@ -1,16 +1,15 @@
 package client;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.net.Socket;
-import java.net.UnknownHostException;
 
 import message.Response;
 import message.request.LoginRequest;
+import message.request.LogoutRequest;
 import message.response.LoginResponse;
 import message.response.LoginResponse.Type;
 import message.response.MessageResponse;
+import model.RequestTO;
+import model.RequestType;
 import cli.Command;
 
 /**
@@ -24,6 +23,12 @@ public class ClientCli implements IClientCli {
 
 	Client client = null;
 
+	/**
+	 * Create a new Client Command Line Interface
+	 * 
+	 * @param client
+	 *            the client from the CLI
+	 */
 	public ClientCli(Client client) {
 		this.client = client;
 	}
@@ -35,40 +40,14 @@ public class ClientCli implements IClientCli {
 	 */
 	@Override
 	@Command
-	public LoginResponse login(String username, String password)
-			throws IOException {
-
-		String host = client.getProxyHost();
-		int port = client.getTcpPort();
+	public LoginResponse login(String username, String password) {
 
 		if (!client.isLogin()) {
-			try (Socket socket = new Socket(host, port);
-					ObjectOutputStream outputStream = new ObjectOutputStream(
-							socket.getOutputStream());
-					ObjectInputStream inStream = new ObjectInputStream(
-							socket.getInputStream());) {
-
-				LoginRequest data = new LoginRequest(username, password);
-				outputStream.writeObject(data);
-				System.out.println("Object sent = " + data);
-				LoginResponse respond = (LoginResponse) inStream.readObject();
-				System.out.println("Object received = " + respond);
-				socket.close();
-				return respond;
-			} catch (UnknownHostException e) {
-				System.err.println("Don't know about host " + host);
-				System.exit(1);
-			} catch (IOException e) {
-				System.err.println("Couldn't get I/O for the connection to "
-						+ host);
-				e.printStackTrace();
-				System.exit(1);
-			} catch (ClassNotFoundException e) {
-				System.err.println("The received object is unknown to " + host);
-				e.printStackTrace();
-				System.exit(1);
-			}
-
+			LoginRequest data = new LoginRequest(username, password);
+			RequestTO request = new RequestTO(data, RequestType.Login);
+			LoginResponse respond = (LoginResponse) client.send(request);
+			client.setLogin(respond.getType() == Type.SUCCESS);
+			return respond;
 		}
 
 		return new LoginResponse(Type.WRONG_CREDENTIALS);
@@ -81,9 +60,6 @@ public class ClientCli implements IClientCli {
 	 */
 	@Override
 	public Response credits() throws IOException {
-		if (client.isLogin()) {
-
-		}
 		// TODO implement !credits command
 		return null;
 	}
@@ -138,9 +114,16 @@ public class ClientCli implements IClientCli {
 	 * @see client.IClientCli#logout()
 	 */
 	@Override
+	@Command
 	public MessageResponse logout() throws IOException {
-		// TODO implement !logout command
-		return null;
+		MessageResponse response = null;
+		if (client.isLogin()) {
+			RequestTO request = new RequestTO(new LogoutRequest(),
+					RequestType.Logout);
+			response = (MessageResponse) client.send(request);
+			client.setLogin(false);
+		}
+		return response;
 	}
 
 	/*

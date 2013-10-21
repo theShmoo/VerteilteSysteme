@@ -7,8 +7,11 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
+import message.Response;
 import message.request.LoginRequest;
+import message.request.LogoutRequest;
 import message.response.LoginResponse;
+import model.RequestTO;
 
 public class ProxyServerSocketThread implements Runnable {
 	private Socket socket = null;
@@ -32,13 +35,24 @@ public class ProxyServerSocketThread implements Runnable {
 				ObjectOutputStream outputStream = new ObjectOutputStream(
 						socket.getOutputStream());
 
-				Object o = inStream.readObject();
-				Class<? extends Object> c = o.getClass();
-				System.out.println(c.getCanonicalName());
+				RequestTO request = (RequestTO) inStream.readObject();
 
-				LoginRequest data = (LoginRequest) o;
-				System.out.println("Object received = " + data);
-				outputStream.writeObject(proxy.login(data));
+				Response response = null;
+				
+				switch (request.getType()) {
+				case Login:
+					response = proxy.login((LoginRequest) request
+							.getRequest());
+					break;
+				case Logout:
+					response = proxy.logout();
+					break;
+				default:
+					//TODO wrong object received
+					break;
+				}
+				
+				outputStream.writeObject(response);
 			}
 		} catch (IOException e) {
 			e.printStackTrace();

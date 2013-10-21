@@ -44,10 +44,19 @@ public class Proxy implements IProxy {
 	private List<UserLoginInfo> users;
 	private Map<FileServerInfo, Long> fileservers;
 
+	/**
+	 * Initialize a new Proxy
+	 */
 	public Proxy() {
 		init(new Shell("Proxy", System.out, System.in));
 	}
 
+	/**
+	 * Initialize a new Proxy with a {@link Shell}
+	 * 
+	 * @param shell
+	 *            the {@link Shell} of the Proxy
+	 */
 	public Proxy(Shell shell) {
 		init(shell);
 	}
@@ -189,10 +198,20 @@ public class Proxy implements IProxy {
 		return null;
 	}
 
+	/**
+	 * Returns all fileservers that are registered on the Proxy
+	 * 
+	 * @return all fileservers
+	 */
 	public Set<FileServerInfo> getFileServerInfos() {
 		return fileservers.keySet();
 	}
 
+	/**
+	 * Returns all users that are registered on the Proxy and their status
+	 * 
+	 * @return all users
+	 */
 	public List<UserInfo> getUserInfos() {
 		List<UserInfo> userinfos = new ArrayList<UserInfo>();
 		for (UserLoginInfo u : users) {
@@ -202,6 +221,16 @@ public class Proxy implements IProxy {
 		return userinfos;
 	}
 
+	/**
+	 * This method gets called when a new isAlive packet is send from a
+	 * fileserver the fileserver gets registered as active for the next time
+	 * interval
+	 * 
+	 * @param fileServerTCPPort
+	 *            the TCP port of the fileserver
+	 * @param adress
+	 *            the address of the fileserver
+	 */
 	public void isAlive(int fileServerTCPPort, InetAddress adress) {
 		boolean newServer = true;
 		for (FileServerInfo f : fileservers.keySet()) {

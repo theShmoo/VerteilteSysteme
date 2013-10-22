@@ -61,15 +61,14 @@ public class ClientCli implements IClientCli {
 	 * @see client.IClientCli#credits()
 	 */
 	@Override
+	@Command
 	public Response credits() throws IOException {
 
 		CreditsResponse respond = null;
 
-		if (!client.isLogin()) {
-			CreditsRequest data = new CreditsRequest();
-			RequestTO request = new RequestTO(data, RequestType.Credits);
-			respond = (CreditsResponse) client.send(request);
-		}
+		CreditsRequest data = new CreditsRequest();
+		RequestTO request = new RequestTO(data, RequestType.Credits);
+		respond = (CreditsResponse) client.send(request);
 
 		return respond;
 	}
@@ -80,6 +79,7 @@ public class ClientCli implements IClientCli {
 	 * @see client.IClientCli#buy(long)
 	 */
 	@Override
+	@Command
 	public Response buy(long credits) throws IOException {
 		// TODO implement !buy command
 		return null;
@@ -91,6 +91,7 @@ public class ClientCli implements IClientCli {
 	 * @see client.IClientCli#list()
 	 */
 	@Override
+	@Command
 	public Response list() throws IOException {
 		// TODO implement !list command
 		return null;
@@ -102,6 +103,7 @@ public class ClientCli implements IClientCli {
 	 * @see client.IClientCli#download(java.lang.String)
 	 */
 	@Override
+	@Command
 	public Response download(String filename) throws IOException {
 		// TODO implement !download command
 		return null;
@@ -113,6 +115,7 @@ public class ClientCli implements IClientCli {
 	 * @see client.IClientCli#upload(java.lang.String) )
 	 */
 	@Override
+	@Command
 	public MessageResponse upload(String filename) throws IOException {
 		// TODO implement !upload command
 		return null;
@@ -127,12 +130,9 @@ public class ClientCli implements IClientCli {
 	@Command
 	public MessageResponse logout() throws IOException {
 		MessageResponse response = null;
-		if (client.isLogin()) {
-			RequestTO request = new RequestTO(new LogoutRequest(),
-					RequestType.Logout);
-			response = (MessageResponse) client.send(request);
-			client.setLogin(false);
-		}
+		RequestTO request = new RequestTO(new LogoutRequest(),
+				RequestType.Logout);
+		response = (MessageResponse) client.send(request);
 		return response;
 	}
 
@@ -142,6 +142,7 @@ public class ClientCli implements IClientCli {
 	 * @see client.IClientCli#exit()
 	 */
 	@Override
+	@Command
 	public MessageResponse exit() throws IOException {
 		// TODO implement !exit command
 		return null;

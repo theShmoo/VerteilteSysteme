@@ -1,12 +1,9 @@
 package server;
 
 import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -16,7 +13,6 @@ import message.request.InfoRequest;
 import message.request.UploadRequest;
 import message.request.VersionRequest;
 import message.response.MessageResponse;
-import model.FileServerInfo;
 import util.Config;
 import cli.Shell;
 

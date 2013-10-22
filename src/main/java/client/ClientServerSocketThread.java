@@ -14,16 +14,12 @@ public class ClientServerSocketThread implements Runnable {
 	private Socket socket = null;
 	private int port;
 	private String host;
-	private Client client;
-	private boolean running;
 	private ObjectOutputStream outputStream;
 	private ObjectInputStream inStream;
 
 	public ClientServerSocketThread(Client client) {
-		this.client = client;
 		this.host = client.getProxyHost();
 		this.port = client.getTcpPort();
-		this.running = true;
 	}
 
 	@Override
@@ -55,9 +51,7 @@ public class ClientServerSocketThread implements Runnable {
 		Response response = null;
 		try {
 			outputStream.writeObject(request);
-			System.out.println("Object sent = " + request);
 			response = (Response) inStream.readObject();
-			System.out.println("Object received = " + response);
 		} catch (IOException e) {
 			System.err
 					.println("Couldn't get I/O for the connection to " + host);

@@ -11,14 +11,6 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import message.Response;
-import message.request.BuyRequest;
-import message.request.DownloadTicketRequest;
-import message.request.LoginRequest;
-import message.request.UploadRequest;
-import message.response.LoginResponse;
-import message.response.LoginResponse.Type;
-import message.response.MessageResponse;
 import model.FileServerInfo;
 import model.UserInfo;
 import model.UserLoginInfo;
@@ -27,11 +19,9 @@ import cli.Shell;
 
 /**
  * 
- * @history 14.10.2013 created
- * @version 14.10.2013 version 0.1
  * @author David
  */
-public class Proxy implements IProxy {
+public class Proxy{
 
 	private Shell shell;
 	private Config proxyConfig;
@@ -65,12 +55,12 @@ public class Proxy implements IProxy {
 	}
 
 	private void init(Shell shell) {
+		getProxyData();
+		
 		this.shell = shell;
 		this.proxyCli = new ProxyCli(this);
 		this.executor = Executors.newCachedThreadPool();
-		this.running=true;
-
-		getProxyData();
+		this.running=true;		
 	}
 
 	private void getProxyData() {
@@ -159,55 +149,6 @@ public class Proxy implements IProxy {
 		}
 		
 
-	}
-
-	@Override
-	public LoginResponse login(LoginRequest request) throws IOException {
-
-		for (UserLoginInfo u : users) {
-			if (u.getName().equals(request.getUsername())
-					&& u.getPassword().equals(request.getPassword())) {
-				u.setOnline();
-				return new LoginResponse(Type.SUCCESS);
-			}
-		}
-
-		return new LoginResponse(Type.WRONG_CREDENTIALS);
-	}
-
-	@Override
-	public Response credits() throws IOException {
-		// TODO implement credits
-		return null;
-	}
-
-	@Override
-	public Response buy(BuyRequest credits) throws IOException {
-		// TODO implement buy
-		return null;
-	}
-
-	@Override
-	public Response list() throws IOException {
-		// TODO implement list
-		return null;
-	}
-
-	@Override
-	public Response download(DownloadTicketRequest request) throws IOException {
-		// TODO implement download
-		return null;
-	}
-
-	@Override
-	public MessageResponse upload(UploadRequest request) throws IOException {
-		// TODO implement upload
-		return null;
-	}
-
-	@Override
-	public MessageResponse logout() throws IOException {
-		return new MessageResponse("Logged out!");
 	}
 
 	/**

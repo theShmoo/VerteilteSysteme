@@ -10,6 +10,7 @@ import message.request.BuyRequest;
 import message.request.DownloadTicketRequest;
 import message.request.LoginRequest;
 import message.request.UploadRequest;
+import message.response.BuyResponse;
 import message.response.CreditsResponse;
 import message.response.LoginResponse;
 import message.response.MessageResponse;
@@ -57,6 +58,9 @@ public class ProxyServerSocketThread implements Runnable, IProxy {
 				case Credits:
 					response = credits();
 					break;
+				case Buy:
+					response = buy((BuyRequest) request.getRequest());
+					break;
 				default:
 					// TODO wrong object received
 					break;
@@ -99,8 +103,11 @@ public class ProxyServerSocketThread implements Runnable, IProxy {
 
 	@Override
 	public Response buy(BuyRequest credits) throws IOException {
-		// TODO implement buy
-		return null;
+		if (userCheck()) {
+			user.addCredits(credits.getCredits());
+			return new BuyResponse(user.getCredits());
+		}
+		return new MessageResponse("No user is authenticated!");
 	}
 
 	@Override

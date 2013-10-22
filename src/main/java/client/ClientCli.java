@@ -3,9 +3,11 @@ package client;
 import java.io.IOException;
 
 import message.Response;
+import message.request.BuyRequest;
 import message.request.CreditsRequest;
 import message.request.LoginRequest;
 import message.request.LogoutRequest;
+import message.response.BuyResponse;
 import message.response.CreditsResponse;
 import message.response.LoginResponse;
 import message.response.LoginResponse.Type;
@@ -44,15 +46,10 @@ public class ClientCli implements IClientCli {
 	@Command
 	public LoginResponse login(String username, String password) {
 
-		if (!client.isLogin()) {
 			LoginRequest data = new LoginRequest(username, password);
 			RequestTO request = new RequestTO(data, RequestType.Login);
 			LoginResponse respond = (LoginResponse) client.send(request);
-			client.setLogin(respond.getType() == Type.SUCCESS);
 			return respond;
-		}
-
-		return new LoginResponse(Type.WRONG_CREDENTIALS);
 	}
 
 	/*
@@ -63,14 +60,9 @@ public class ClientCli implements IClientCli {
 	@Override
 	@Command
 	public Response credits() throws IOException {
-
-		CreditsResponse respond = null;
-
 		CreditsRequest data = new CreditsRequest();
 		RequestTO request = new RequestTO(data, RequestType.Credits);
-		respond = (CreditsResponse) client.send(request);
-
-		return respond;
+		return (CreditsResponse) client.send(request);
 	}
 
 	/*
@@ -81,8 +73,9 @@ public class ClientCli implements IClientCli {
 	@Override
 	@Command
 	public Response buy(long credits) throws IOException {
-		// TODO implement !buy command
-		return null;
+		BuyRequest data = new BuyRequest(credits);
+		RequestTO request = new RequestTO(data, RequestType.Buy);
+		return (BuyResponse) client.send(request);
 	}
 
 	/*
@@ -129,11 +122,9 @@ public class ClientCli implements IClientCli {
 	@Override
 	@Command
 	public MessageResponse logout() throws IOException {
-		MessageResponse response = null;
 		RequestTO request = new RequestTO(new LogoutRequest(),
 				RequestType.Logout);
-		response = (MessageResponse) client.send(request);
-		return response;
+		return (MessageResponse) client.send(request);
 	}
 
 	/*

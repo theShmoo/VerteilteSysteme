@@ -75,4 +75,8 @@ public class UserLoginInfo {
 	public boolean isOnline() {
 		return online;
 	}
+
+	public void addCredits(long credits) {
+		this.credits += credits;
+	}
 }

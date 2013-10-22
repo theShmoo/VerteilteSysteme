@@ -30,7 +30,6 @@ public class Client implements IClient {
 	private String downloadDir = "";
 	private String proxyHost = "";
 	private int tcpPort;
-	private boolean login;
 
 	/**
 	 * Create a new Client with the given {@link Shell} for its commands
@@ -54,7 +53,6 @@ public class Client implements IClient {
 
 		this.shell = shell;
 		this.clientCli = new ClientCli(this);
-		this.login = false;
 		this.executor = Executors.newCachedThreadPool();
 		this.clientThread = new ClientServerSocketThread(this);
 
@@ -97,15 +95,6 @@ public class Client implements IClient {
 	}
 
 	/**
-	 * Returns <code>true</code> if the user is logged in
-	 * 
-	 * @return <code>true</code> if the user is logged in
-	 */
-	public boolean isLogin() {
-		return login;
-	}
-
-	/**
 	 * Returns the hostname of the {@link Proxy}
 	 * 
 	 * @return the hostname of the {@link Proxy}
@@ -132,14 +121,6 @@ public class Client implements IClient {
 	 */
 	public Response send(RequestTO request) {
 		return clientThread.send(request);
-	}
-
-	/**
-	 * Set the login status 
-	 * @param login <code>true</code> if the client is logged in
-	 */
-	public void setLogin(boolean login) {
-		this.login = login;
 	}
 
 }

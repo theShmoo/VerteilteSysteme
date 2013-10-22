@@ -20,5 +20,10 @@ public enum RequestType {
 	/**
 	 * For a {@link Client} to request the number of his credits
 	 */
-	Credits
+	Credits, 
+	/**
+	 * For a {@link Client} to buy some credits
+	 */
+	Buy
 }
+

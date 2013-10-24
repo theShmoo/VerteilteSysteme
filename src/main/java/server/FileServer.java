@@ -4,25 +4,18 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.ServerSocket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import message.Response;
-import message.request.DownloadFileRequest;
-import message.request.InfoRequest;
-import message.request.UploadRequest;
-import message.request.VersionRequest;
-import message.response.MessageResponse;
 import util.Config;
 import cli.Shell;
 
 /**
  * 
- * @history 14.10.2013 created
- * @version 14.10.2013 version 0.1
  * @author David
  */
-public class FileServer implements IFileServer {
+public class FileServer {
 
 	private Shell shell;
 	private Config config;
@@ -37,10 +30,19 @@ public class FileServer implements IFileServer {
 	private int udpPort;
 	private String proxyHost = "";
 
+	private boolean running;
+	/**
+	 * Initialize a new fileserver with a {@link Shell}
+	 * 
+	 * @param shell
+	 */
 	public FileServer(Shell shell) {
 		init(shell);
 	}
 
+	/**
+	 * Initialize a new fileserver
+	 */
 	public FileServer() {
 		// TODO name of fileserver dynamically
 		name = "fs1";
@@ -51,7 +53,9 @@ public class FileServer implements IFileServer {
 		this.shell = shell;
 		this.serverCli = new FileServerCli();
 		executor = Executors.newCachedThreadPool();
+		
 		getServerData();
+		this.running = true;
 	}
 
 	private void getServerData() {
@@ -88,29 +92,7 @@ public class FileServer implements IFileServer {
 
 		shell.register(new FileServerCli());
 
-		// shell.run();
-//		System.out.println(proxyHost + " " + tcpPort);
-
-//		try (Socket socket = new Socket(proxyHost, 10180);
-//				ObjectOutputStream outputStream = new ObjectOutputStream(
-//						socket.getOutputStream());) {
-//
-//			FileServerInfo data = new FileServerInfo(
-//					InetAddress.getLocalHost(), tcpPort, 0, true);
-//			outputStream.writeObject(data);
-//			System.out.println("Object sent = " + data);
-//			socket.close();
-//		} catch (UnknownHostException e) {
-//			System.err.println("Don't know about host " + proxyHost);
-//			System.exit(1);
-//		} catch (IOException e) {
-//			System.err.println("Couldn't get I/O for the connection to "
-//					+ proxyHost);
-//			e.printStackTrace();
-//			System.exit(1);
-//		}
-
-		try (DatagramSocket socket = new DatagramSocket()) {
+		try {
 
 			String aliveMessage = "!alive " + String.valueOf(tcpPort);
 			System.out.println(aliveMessage);
@@ -121,42 +103,23 @@ public class FileServer implements IFileServer {
 			DatagramPacket packet = new DatagramPacket(buf, buf.length,
 					address, udpPort);
 
-			new FileServerDatagramThread(packet, socket, alive).run();
+			executor.execute(new FileServerDatagramThread(packet, alive));
+			System.out.println("File Server UDP sending machine is running");
 
 		} catch (IOException e) {
 			e.printStackTrace();
 			System.exit(1);
 		}
-	}
 
-	@Override
-	public Response list() throws IOException {
-		// TODO implement list
-		return null;
+//		 Starting the ServerSocket
+		try (ServerSocket serverSocket = new ServerSocket(tcpPort)) {
+			while(running){
+				executor.execute(new FileServerSocketThread(this, serverSocket
+						.accept()));
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
 	}
-
-	@Override
-	public Response download(DownloadFileRequest request) throws IOException {
-		// TODO implement download
-		return null;
-	}
-
-	@Override
-	public Response info(InfoRequest request) throws IOException {
-		// TODO implement info
-		return null;
-	}
-
-	@Override
-	public Response version(VersionRequest request) throws IOException {
-		// TODO implement version
-		return null;
-	}
-
-	@Override
-	public MessageResponse upload(UploadRequest request) throws IOException {
-		// TODO implement upload
-		return null;
-	}
-
 }

@@ -9,7 +9,7 @@ import java.net.UnknownHostException;
 import message.Response;
 import model.RequestTO;
 
-public class ClientServerSocketThread implements Runnable {
+public class ClientServerSocketThread{
 
 	private Socket socket = null;
 	private int port;
@@ -17,13 +17,15 @@ public class ClientServerSocketThread implements Runnable {
 	private ObjectOutputStream outputStream;
 	private ObjectInputStream inStream;
 
-	public ClientServerSocketThread(Client client) {
-		this.host = client.getProxyHost();
-		this.port = client.getTcpPort();
-	}
-
-	@Override
-	public void run() {
+	/**
+	 * Initialize a new ClientServerSocketThread for TCP connections
+	 * @param port the port of the connection
+	 * @param host the host of the connection
+	 */
+	public ClientServerSocketThread(int port, String host) {
+		this.host = host;
+		this.port = port;
+		
 		try {
 			socket = new Socket(host, port);
 			outputStream = new ObjectOutputStream(
@@ -47,7 +49,7 @@ public class ClientServerSocketThread implements Runnable {
 	 *            the request transfer object
 	 * @return the response
 	 */
-	public synchronized Response send(RequestTO request) {
+	public Response send(RequestTO request) {
 		Response response = null;
 		try {
 			outputStream.writeObject(request);
@@ -63,6 +65,20 @@ public class ClientServerSocketThread implements Runnable {
 			System.exit(1);
 		}
 		return response;
+	}
+	
+	/**
+	 * Kills this process needs to get called
+	 * @post the process is dead
+	 */
+	public void close(){
+		try{
+			outputStream.close();
+			inStream.close();
+			socket.close();
+		} catch(IOException e){
+			e.printStackTrace();
+		}
 	}
 
 }

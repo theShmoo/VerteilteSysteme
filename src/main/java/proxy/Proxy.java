@@ -21,7 +21,7 @@ import cli.Shell;
  * 
  * @author David
  */
-public class Proxy{
+public class Proxy {
 
 	private Shell shell;
 	private Config proxyConfig;
@@ -34,7 +34,7 @@ public class Proxy{
 
 	private List<UserLoginInfo> users;
 	private Map<FileServerInfo, Long> fileservers;
-	
+
 	private boolean running;
 
 	/**
@@ -56,11 +56,11 @@ public class Proxy{
 
 	private void init(Shell shell) {
 		getProxyData();
-		
+
 		this.shell = shell;
 		this.proxyCli = new ProxyCli(this);
 		this.executor = Executors.newCachedThreadPool();
-		this.running=true;		
+		this.running = true;
 	}
 
 	private void getProxyData() {
@@ -137,17 +137,18 @@ public class Proxy{
 		// Starting the Garbage Collector for the fileservers
 		executor.execute(new FileServerGarbageCollector(fileservers, fsTimeout,
 				fsCheckPeriod));
+		// Starting the ServerSocket
 		try (ServerSocket serverSocket = new ServerSocket(tcpPort)) {
-			while(running){
-				executor.execute(new ProxyServerSocketThread(this,serverSocket.accept()));
+			while (running) {
+				executor.execute(new ProxyServerSocketThread(this, serverSocket
+						.accept()));
 			}
 		}
-		// Starting the ServerSocket
+		
 		catch (IOException e) {
 			e.printStackTrace();
 			System.exit(1);
 		}
-		
 
 	}
 
@@ -173,7 +174,7 @@ public class Proxy{
 		}
 		return userinfos;
 	}
-	
+
 	/**
 	 * Returns all users that are registered on the Proxy and their status
 	 * 
@@ -208,12 +209,38 @@ public class Proxy{
 		}
 	}
 
+	/**
+	 * Returns the TCP port number of the Proxy
+	 * 
+	 * @return the TCP port number of the Proxy
+	 */
 	public int getTcpPort() {
 		return tcpPort;
 	}
 
+	/**
+	 * Returns the UDP port number of the Proxy
+	 * 
+	 * @return the UDP port number of the Proxy
+	 */
 	public int getUdpPort() {
 		return udpPort;
+	}
+
+	/**
+	 * Returns the fileserver with the lowest latency
+	 * 
+	 * @pre minimum one fileserver is connected
+	 * @return the fileserver with the lowest latency
+	 */
+	public FileServerInfo getFileserver() {
+		long usage = Long.MAX_VALUE;
+		FileServerInfo best = null;
+		for (FileServerInfo f : fileservers.keySet()) {
+			usage = f.getUsage() < usage ? f.getUsage() : usage;
+			best = f;
+		}
+		return best;
 	}
 
 }

@@ -12,12 +12,21 @@ import message.request.LoginRequest;
 import message.request.UploadRequest;
 import message.response.BuyResponse;
 import message.response.CreditsResponse;
+import message.response.DownloadTicketResponse;
 import message.response.LoginResponse;
-import message.response.MessageResponse;
 import message.response.LoginResponse.Type;
+import message.response.MessageResponse;
+import model.DownloadTicket;
+import model.FileServerInfo;
 import model.RequestTO;
 import model.UserLoginInfo;
+import client.Client;
 
+/**
+ * A TCP Server Socket Thread that handles Requests from {@link Client}
+ * 
+ * @author David
+ */
 public class ProxyServerSocketThread implements Runnable, IProxy {
 	private Socket socket = null;
 	private Proxy proxy;
@@ -61,6 +70,11 @@ public class ProxyServerSocketThread implements Runnable, IProxy {
 				case Buy:
 					response = buy((BuyRequest) request.getRequest());
 					break;
+				case Ticket:
+					response = download((DownloadTicketRequest) request
+							.getRequest());
+					break;
+
 				default:
 					// TODO wrong object received
 					break;
@@ -69,7 +83,7 @@ public class ProxyServerSocketThread implements Runnable, IProxy {
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
-			System.exit(1);
+			System.exit(1); // TODO clean shutdown of thread
 		} catch (ClassNotFoundException e) {
 			e.printStackTrace();
 			System.exit(1);
@@ -118,8 +132,16 @@ public class ProxyServerSocketThread implements Runnable, IProxy {
 
 	@Override
 	public Response download(DownloadTicketRequest request) throws IOException {
-		// TODO implement download
-		return null;
+		if (userCheck()) {
+			FileServerInfo server = proxy.getFileserver();
+
+			DownloadTicket ticket = new DownloadTicket(user.getName(),
+					request.getFilename(), "checksum", server.getAddress(),
+					server.getPort());
+			DownloadTicketResponse respond = new DownloadTicketResponse(ticket);
+			return respond;
+		}
+		return new MessageResponse("No user is authenticated!");
 	}
 
 	@Override

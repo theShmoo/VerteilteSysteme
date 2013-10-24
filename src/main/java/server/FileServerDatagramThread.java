@@ -3,6 +3,7 @@ package server;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.SocketException;
 
 public class FileServerDatagramThread implements Runnable {
 	private DatagramPacket packet;
@@ -10,11 +11,20 @@ public class FileServerDatagramThread implements Runnable {
 	private long alive;
 	private boolean running;
 
-	public FileServerDatagramThread(DatagramPacket packet, DatagramSocket socket,long alive) {
+	/**
+	 * @param packet
+	 * @param alive
+	 */
+	public FileServerDatagramThread(DatagramPacket packet, long alive) {
 		this.packet = packet;
-		this.socket = socket;
 		this.alive = alive;
 		this.running = true;
+		try {
+			socket = new DatagramSocket();
+		} catch (SocketException e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
 	}
 
 	@Override
@@ -25,13 +35,14 @@ public class FileServerDatagramThread implements Runnable {
 				Thread.sleep(alive);
 			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
+			running = false;
 			e.printStackTrace();
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
+			running = false;
 			e.printStackTrace();
+		} finally {
+			socket.close();
 		}
-		socket.close();
 
 	}
 

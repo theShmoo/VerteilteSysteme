@@ -6,8 +6,12 @@ import java.util.concurrent.Executors;
 
 import message.Request;
 import message.Response;
+import message.request.DownloadFileRequest;
+import model.DownloadTicket;
 import model.RequestTO;
+import model.RequestType;
 import proxy.Proxy;
+import server.FileServer;
 import util.Config;
 import cli.Shell;
 
@@ -54,7 +58,7 @@ public class Client implements IClient {
 		this.shell = shell;
 		this.clientCli = new ClientCli(this);
 		this.executor = Executors.newCachedThreadPool();
-		this.clientThread = new ClientServerSocketThread(this);
+		this.clientThread = new ClientServerSocketThread(tcpPort, proxyHost);
 
 	}
 
@@ -90,8 +94,6 @@ public class Client implements IClient {
 		shell.register(clientCli);
 
 		executor.execute(shell);
-
-		executor.execute(clientThread);
 	}
 
 	/**
@@ -121,6 +123,23 @@ public class Client implements IClient {
 	 */
 	public Response send(RequestTO request) {
 		return clientThread.send(request);
+	}
+
+	/**
+	 * Returns the {@link DownloadFileRequest} from the {@link FileServer}
+	 * 
+	 * @param ticket
+	 *            the {@link DownloadTicket} from the {@link Proxy}
+	 * @return the {@link DownloadFileRequest} from the {@link FileServer}
+	 */
+	public Response download(DownloadTicket ticket) {
+		ClientServerSocketThread clientToFileServer = new ClientServerSocketThread(
+				ticket.getPort(), proxyHost);
+		Response response = clientToFileServer.send(new RequestTO(
+				new DownloadFileRequest(ticket), RequestType.File));
+		clientToFileServer.close();
+		return response;
+
 	}
 
 }

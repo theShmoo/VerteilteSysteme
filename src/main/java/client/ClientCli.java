@@ -5,13 +5,13 @@ import java.io.IOException;
 import message.Response;
 import message.request.BuyRequest;
 import message.request.CreditsRequest;
+import message.request.DownloadTicketRequest;
 import message.request.LoginRequest;
 import message.request.LogoutRequest;
-import message.response.BuyResponse;
-import message.response.CreditsResponse;
+import message.response.DownloadTicketResponse;
 import message.response.LoginResponse;
-import message.response.LoginResponse.Type;
 import message.response.MessageResponse;
+import model.DownloadTicket;
 import model.RequestTO;
 import model.RequestType;
 import cli.Command;
@@ -62,7 +62,7 @@ public class ClientCli implements IClientCli {
 	public Response credits() throws IOException {
 		CreditsRequest data = new CreditsRequest();
 		RequestTO request = new RequestTO(data, RequestType.Credits);
-		return (CreditsResponse) client.send(request);
+		return client.send(request);
 	}
 
 	/*
@@ -75,7 +75,7 @@ public class ClientCli implements IClientCli {
 	public Response buy(long credits) throws IOException {
 		BuyRequest data = new BuyRequest(credits);
 		RequestTO request = new RequestTO(data, RequestType.Buy);
-		return (BuyResponse) client.send(request);
+		return client.send(request);
 	}
 
 	/*
@@ -98,8 +98,14 @@ public class ClientCli implements IClientCli {
 	@Override
 	@Command
 	public Response download(String filename) throws IOException {
-		// TODO implement !download command
-		return null;
+		DownloadTicketRequest data = new DownloadTicketRequest(filename);
+		RequestTO request = new RequestTO(data,RequestType.Ticket);
+		Response response = client.send(request);
+		if(response instanceof DownloadTicketResponse){
+			DownloadTicket ticket = ((DownloadTicketResponse) response).getTicket();
+			response = client.download(ticket);
+		} 
+		return response;
 	}
 
 	/*

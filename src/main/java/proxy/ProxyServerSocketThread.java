@@ -1,9 +1,11 @@
 package proxy;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.Set;
 
 import message.Response;
 import message.request.BuyRequest;
@@ -13,6 +15,7 @@ import message.request.UploadRequest;
 import message.response.BuyResponse;
 import message.response.CreditsResponse;
 import message.response.DownloadTicketResponse;
+import message.response.ListResponse;
 import message.response.LoginResponse;
 import message.response.LoginResponse.Type;
 import message.response.MessageResponse;
@@ -29,12 +32,23 @@ import client.Client;
  */
 public class ProxyServerSocketThread implements Runnable, IProxy {
 	private Socket socket = null;
+	private ObjectInputStream inStream = null;
+	private ObjectOutputStream outputStream = null;
 	private Proxy proxy;
 	private boolean running;
 
 	// User
 	private UserLoginInfo user;
 
+	/**
+	 * Initialize a new ProxyServerSocketThread that handles Requests from
+	 * {@link Client}
+	 * 
+	 * @param proxy
+	 *            the proxy
+	 * @param socket
+	 *            the socket
+	 */
 	public ProxyServerSocketThread(Proxy proxy, Socket socket) {
 		this.proxy = proxy;
 		this.running = true;
@@ -45,10 +59,8 @@ public class ProxyServerSocketThread implements Runnable, IProxy {
 
 		try {
 
-			ObjectInputStream inStream = new ObjectInputStream(
-					socket.getInputStream());
-			ObjectOutputStream outputStream = new ObjectOutputStream(
-					socket.getOutputStream());
+			this.inStream = new ObjectInputStream(socket.getInputStream());
+			this.outputStream = new ObjectOutputStream(socket.getOutputStream());
 
 			while (running) {
 				RequestTO request = (RequestTO) inStream.readObject();
@@ -74,19 +86,37 @@ public class ProxyServerSocketThread implements Runnable, IProxy {
 					response = download((DownloadTicketRequest) request
 							.getRequest());
 					break;
-
+				case List:
+					response = list();
+					break;
+				case File:
+					// TODO File (what the hell is that shit)
+					break;
+				case Upload:
+					upload((UploadRequest) request.getRequest());
+					break;
 				default:
 					// TODO wrong object received
 					break;
 				}
 				outputStream.writeObject(response);
 			}
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.exit(1); // TODO clean shutdown of thread
 		} catch (ClassNotFoundException e) {
 			e.printStackTrace();
 			System.exit(1);
+		} catch (EOFException e) {
+			running = false;
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(1);
+		} finally {
+			try {
+				socket.close();
+				inStream.close();
+				outputStream.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 
@@ -96,12 +126,14 @@ public class ProxyServerSocketThread implements Runnable, IProxy {
 
 	@Override
 	public LoginResponse login(LoginRequest request) throws IOException {
-		for (UserLoginInfo u : proxy.getUserLoginInfos()) {
-			if (u.getName().equals(request.getUsername())
-					&& u.getPassword().equals(request.getPassword())) {
-				this.user = u;
-				u.setOnline();
-				return new LoginResponse(Type.SUCCESS);
+		if (!userCheck()) {
+			for (UserLoginInfo u : proxy.getUserLoginInfos()) {
+				if (u.getName().equals(request.getUsername())
+						&& u.getPassword().equals(request.getPassword())) {
+					this.user = u;
+					u.setOnline();
+					return new LoginResponse(Type.SUCCESS);
+				}
 			}
 		}
 		return new LoginResponse(Type.WRONG_CREDENTIALS);
@@ -112,7 +144,7 @@ public class ProxyServerSocketThread implements Runnable, IProxy {
 		if (userCheck()) {
 			return new CreditsResponse(user.getCredits());
 		}
-		return new MessageResponse("Couldn't receive credits!");
+		return new MessageResponse("No user is authenticated!");
 	}
 
 	@Override
@@ -126,8 +158,11 @@ public class ProxyServerSocketThread implements Runnable, IProxy {
 
 	@Override
 	public Response list() throws IOException {
-		// TODO implement list
-		return null;
+		if (userCheck()) {
+			Set<String> set = proxy.getFiles();
+			return new ListResponse(set);
+		}
+		return new MessageResponse("No user is authenticated!");
 	}
 
 	@Override
@@ -146,8 +181,10 @@ public class ProxyServerSocketThread implements Runnable, IProxy {
 
 	@Override
 	public MessageResponse upload(UploadRequest request) throws IOException {
-		// TODO implement upload
-		return null;
+		if (userCheck()) {
+			proxy.distributeFile(request);
+		}
+		return new MessageResponse("No user is authenticated!");
 	}
 
 	@Override

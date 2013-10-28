@@ -4,6 +4,9 @@ import java.util.Map;
 
 import model.FileServerInfo;
 
+/**
+ * @author David
+ */
 public class FileServerGarbageCollector implements Runnable {
 
 	private Map<FileServerInfo, Long> fileservers;
@@ -11,6 +14,18 @@ public class FileServerGarbageCollector implements Runnable {
 	private long checkPeriod;
 	private boolean running;
 
+	/**
+	 * Initialize a new File Server Garbage Collector that sets a fileserver to
+	 * offline if it has not sent an UDP isAlive package in the given time
+	 * intervall
+	 * 
+	 * @param fileservers
+	 *            the fileservers to check
+	 * @param fileserverTimeout
+	 *            the intervall
+	 * @param checkPeriod
+	 *            the period to check
+	 */
 	public FileServerGarbageCollector(Map<FileServerInfo, Long> fileservers,
 			long fileserverTimeout, long checkPeriod) {
 		this.fileservers = fileservers;
@@ -21,14 +36,18 @@ public class FileServerGarbageCollector implements Runnable {
 
 	@Override
 	public void run() {
-		while(running){
+		while (running) {
 			try {
 				Thread.sleep(checkPeriod);
-				for(FileServerInfo f : fileservers.keySet()){
-					if(f.isOnline() && fileservers.get(f) < System.currentTimeMillis()-fileserverTimeout){
+				for (FileServerInfo f : fileservers.keySet()) {
+					if (f.isOnline()
+							&& fileservers.get(f) < System.currentTimeMillis()
+									- fileserverTimeout) {
 						System.out.println("Fileserver out of time!");
 						fileservers.remove(f);
-						fileservers.put(new FileServerInfo(f.getAddress(),f.getPort(),f.getUsage(),false),0l);
+						fileservers.put(
+								new FileServerInfo(f.getAddress(), f.getPort(),
+										f.getUsage(), false), 0l);
 					}
 				}
 			} catch (InterruptedException e) {

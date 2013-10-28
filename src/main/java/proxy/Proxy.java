@@ -5,23 +5,34 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import message.Response;
+import message.request.ListRequest;
+import message.request.UploadRequest;
+import message.request.VersionRequest;
+import message.response.ListResponse;
+import message.response.VersionResponse;
 import model.FileServerInfo;
+import model.RequestTO;
+import model.RequestType;
 import model.UserInfo;
 import model.UserLoginInfo;
+import server.FileServer;
 import util.Config;
+import util.SingleServerSocketCommunication;
 import cli.Shell;
 
 /**
  * 
  * @author David
  */
-public class Proxy {
+public class Proxy implements Runnable {
 
 	private Shell shell;
 	private Config proxyConfig;
@@ -32,7 +43,7 @@ public class Proxy {
 	private int tcpPort, udpPort;
 	private long fsTimeout, fsCheckPeriod;
 
-	private List<UserLoginInfo> users;
+	private Set<UserLoginInfo> users;
 	private Map<FileServerInfo, Long> fileservers;
 
 	private boolean running;
@@ -85,9 +96,9 @@ public class Proxy {
 		this.users = getUsers();
 	}
 
-	private List<UserLoginInfo> getUsers() {
+	private Set<UserLoginInfo> getUsers() {
 
-		List<UserLoginInfo> users = new ArrayList<UserLoginInfo>();
+		Set<UserLoginInfo> users = new LinkedHashSet<UserLoginInfo>();
 
 		Config userConfig = new Config("user");
 
@@ -128,7 +139,9 @@ public class Proxy {
 		new Proxy().run();
 	}
 
-	private void run() {
+	@Override
+	public void run() {
+
 		shell.register(proxyCli);
 
 		executor.execute(shell);
@@ -144,7 +157,7 @@ public class Proxy {
 						.accept()));
 			}
 		}
-		
+
 		catch (IOException e) {
 			e.printStackTrace();
 			System.exit(1);
@@ -180,7 +193,7 @@ public class Proxy {
 	 * 
 	 * @return all users
 	 */
-	public List<UserLoginInfo> getUserLoginInfos() {
+	public Set<UserLoginInfo> getUserLoginInfos() {
 		return users;
 	}
 
@@ -236,11 +249,80 @@ public class Proxy {
 	public FileServerInfo getFileserver() {
 		long usage = Long.MAX_VALUE;
 		FileServerInfo best = null;
-		for (FileServerInfo f : fileservers.keySet()) {
+		for (FileServerInfo f : getOnlineFileservers()) {
 			usage = f.getUsage() < usage ? f.getUsage() : usage;
 			best = f;
 		}
 		return best;
 	}
 
+	/**
+	 * Returns all online {@link FileServer}s
+	 * 
+	 * @return all online {@link FileServer}s
+	 */
+	public Set<FileServerInfo> getOnlineFileservers() {
+		Set<FileServerInfo> onlineServers = new LinkedHashSet<FileServerInfo>();
+		for (FileServerInfo f : fileservers.keySet()) {
+			if (f.isOnline()) {
+				onlineServers.add(f);
+			}
+		}
+		return onlineServers;
+	}
+
+	/**
+	 * Returns all files that are available for download as a list of Strings
+	 * 
+	 * @return all files that are available for download as a list of Strings
+	 */
+	public Set<String> getFiles() {
+		FileServerInfo server = getFileserver();
+		SingleServerSocketCommunication sender = new SingleServerSocketCommunication(
+				server.getPort(), server.getAddress().getHostAddress());
+		Response response = sender.send(new RequestTO(new ListRequest(),
+				RequestType.List));
+		sender.close();
+		if (response instanceof ListResponse) {
+			return ((ListResponse) response).getFileNames();
+		}
+
+		return null; // TODO error handling
+
+	}
+
+	/**
+	 * Send the requested upload to all {@link FileServer}s
+	 * 
+	 * @param request
+	 *            the UploadRequest from a clients
+	 */
+	public void distributeFile(UploadRequest request) {
+		
+		int version = 0;
+		Set<FileServerInfo> fileservers = getOnlineFileservers();
+		Set<SingleServerSocketCommunication> connections = new LinkedHashSet<SingleServerSocketCommunication>();
+		
+		for( FileServerInfo f : fileservers){
+			SingleServerSocketCommunication sender = new SingleServerSocketCommunication(
+					f.getPort(), f.getAddress().getHostAddress());
+			connections.add(sender);
+			Response response = sender.send(new RequestTO(new VersionRequest(request.getFilename()),
+					RequestType.Version));
+			if (response instanceof VersionResponse){
+				int curVersion = ((VersionResponse) response).getVersion();
+				version = curVersion > version ? curVersion : version;
+			} else{
+				//TODO error handling
+			}
+		}
+		
+		RequestTO requestWithVersion = new RequestTO(new UploadRequest(request.getFilename(), version, request.getContent()),RequestType.Upload);
+		
+		for( SingleServerSocketCommunication s : connections){
+			s.send(requestWithVersion);
+			s.close();
+		}
+		
+	}
 }

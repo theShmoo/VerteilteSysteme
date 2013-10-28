@@ -5,6 +5,12 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 
+/**
+ * A FileServerDatagramThread sends a Datagram packet in a specified time
+ * interval
+ * 
+ * @author David
+ */
 public class FileServerDatagramThread implements Runnable {
 	private DatagramPacket packet;
 	private DatagramSocket socket;

@@ -3,8 +3,6 @@ package model;
 /**
  * The User Info with password
  * 
- * @history 17.10.2013
- * @version 17.10.2013 version 0.1
  * @author David
  */
 public class UserLoginInfo {
@@ -39,44 +37,66 @@ public class UserLoginInfo {
 	public String getPassword() {
 		return password;
 	}
-	
+
 	/**
 	 * Returns the credits of the user
+	 * 
 	 * @return the credits of the user
 	 */
 	public long getCredits() {
 		return credits;
 	}
-	
+
 	/**
 	 * Returns the name of the user
+	 * 
 	 * @return the name of the user
 	 */
 	public String getName() {
 		return name;
 	}
-	
+
 	/**
 	 * Set the Credits of the user completely new
-	 * @param credits the new credits of the user
+	 * 
+	 * @param credits
+	 *            the new credits of the user
 	 */
 	public void setCredits(long credits) {
 		this.credits = credits;
 	}
-	
+
+	/**
+	 * Set the user Online
+	 */
 	public void setOnline() {
 		this.online = true;
 	}
-	
+
+	/**
+	 * Set the user Offline
+	 */
 	public void setOffline() {
 		this.online = false;
 	}
-	
+
+	/**
+	 * Returns <code>true</code> if the user is online
+	 * 
+	 * @return the user online status
+	 */
 	public boolean isOnline() {
 		return online;
 	}
 
+	/**
+	 * Adds credits to the user
+	 * 
+	 * @param credits
+	 *            the credits
+	 */
 	public void addCredits(long credits) {
 		this.credits += credits;
 	}
+
 }

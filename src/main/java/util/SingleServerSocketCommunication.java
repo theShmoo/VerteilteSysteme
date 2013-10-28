@@ -1,4 +1,4 @@
-package client;
+package util;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -9,22 +9,24 @@ import java.net.UnknownHostException;
 import message.Response;
 import model.RequestTO;
 
-public class ClientServerSocketThread{
+/**
+ * A SingleServerSocketCommunication is a a 
+ * @author David
+ */
+public class SingleServerSocketCommunication{
 
 	private Socket socket = null;
-	private int port;
 	private String host;
 	private ObjectOutputStream outputStream;
 	private ObjectInputStream inStream;
 
 	/**
-	 * Initialize a new ClientServerSocketThread for TCP connections
+	 * Initialize a new SingleServerSocketCommunication for TCP connections
 	 * @param port the port of the connection
 	 * @param host the host of the connection
 	 */
-	public ClientServerSocketThread(int port, String host) {
+	public SingleServerSocketCommunication(int port, String host) {
 		this.host = host;
-		this.port = port;
 		
 		try {
 			socket = new Socket(host, port);

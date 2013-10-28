@@ -2,6 +2,9 @@ package model;
 
 import message.Request;
 import proxy.Proxy;
+import server.FileServer;
+import client.Client;
+
 
 /**
  * An enumeration of all the {@link Request} messages
@@ -26,12 +29,22 @@ public enum RequestType {
 	 */
 	Buy,
 	/**
-	 * For a {@link Client} to get a {@link Ticket} for a download
+	 * For a {@link Client} to get a {@link DownloadTicket} for a download
 	 */
 	Ticket,
 
 	/**
-	 * For a Client to download a file from a fileserver
+	 * For a Client to download a file from a {@link FileServer}
 	 */
-	File
+	File,
+	/**
+	 * For a Client to get the List of the available files
+	 */
+	List,
+	/**
+	 * For a upload from the {@link Client} to the {@link FileServer}s
+	 */
+	Upload, 
+
+	Info, Version
 }

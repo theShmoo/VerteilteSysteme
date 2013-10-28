@@ -6,14 +6,17 @@ import message.Response;
 import message.request.BuyRequest;
 import message.request.CreditsRequest;
 import message.request.DownloadTicketRequest;
+import message.request.ListRequest;
 import message.request.LoginRequest;
 import message.request.LogoutRequest;
+import message.request.UploadRequest;
 import message.response.DownloadTicketResponse;
 import message.response.LoginResponse;
 import message.response.MessageResponse;
 import model.DownloadTicket;
 import model.RequestTO;
 import model.RequestType;
+import util.FileUtils;
 import cli.Command;
 
 /**
@@ -46,10 +49,10 @@ public class ClientCli implements IClientCli {
 	@Command
 	public LoginResponse login(String username, String password) {
 
-			LoginRequest data = new LoginRequest(username, password);
-			RequestTO request = new RequestTO(data, RequestType.Login);
-			LoginResponse respond = (LoginResponse) client.send(request);
-			return respond;
+		LoginRequest data = new LoginRequest(username, password);
+		RequestTO request = new RequestTO(data, RequestType.Login);
+		LoginResponse respond = (LoginResponse) client.send(request);
+		return respond;
 	}
 
 	/*
@@ -86,8 +89,9 @@ public class ClientCli implements IClientCli {
 	@Override
 	@Command
 	public Response list() throws IOException {
-		// TODO implement !list command
-		return null;
+		ListRequest data = new ListRequest();
+		RequestTO request = new RequestTO(data, RequestType.List);
+		return client.send(request);
 	}
 
 	/*
@@ -99,12 +103,13 @@ public class ClientCli implements IClientCli {
 	@Command
 	public Response download(String filename) throws IOException {
 		DownloadTicketRequest data = new DownloadTicketRequest(filename);
-		RequestTO request = new RequestTO(data,RequestType.Ticket);
+		RequestTO request = new RequestTO(data, RequestType.Ticket);
 		Response response = client.send(request);
-		if(response instanceof DownloadTicketResponse){
-			DownloadTicket ticket = ((DownloadTicketResponse) response).getTicket();
+		if (response instanceof DownloadTicketResponse) {
+			DownloadTicket ticket = ((DownloadTicketResponse) response)
+					.getTicket();
 			response = client.download(ticket);
-		} 
+		}
 		return response;
 	}
 
@@ -116,8 +121,11 @@ public class ClientCli implements IClientCli {
 	@Override
 	@Command
 	public MessageResponse upload(String filename) throws IOException {
-		// TODO implement !upload command
-		return null;
+		UploadRequest data = new UploadRequest(filename,
+				client.getVersion(filename), FileUtils.getFile(
+						client.getPath(), filename));
+		RequestTO request = new RequestTO(data,RequestType.Upload);
+		return (MessageResponse) client.send(request);
 	}
 
 	/*
@@ -141,8 +149,9 @@ public class ClientCli implements IClientCli {
 	@Override
 	@Command
 	public MessageResponse exit() throws IOException {
-		// TODO implement !exit command
-		return null;
+		logout();
+		client.exit();
+		return new MessageResponse("Shutting down client now");
 	}
 
 }

@@ -1,21 +1,27 @@
 package server;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
 
 import message.Response;
-import message.request.BuyRequest;
 import message.request.DownloadFileRequest;
-import message.request.DownloadTicketRequest;
 import message.request.InfoRequest;
-import message.request.LoginRequest;
 import message.request.UploadRequest;
 import message.request.VersionRequest;
+import message.response.DownloadFileResponse;
+import message.response.ListResponse;
 import message.response.MessageResponse;
+import message.response.VersionResponse;
+import model.DownloadTicket;
+import model.FileInfo;
 import model.RequestTO;
 import proxy.Proxy;
+import util.FileUtils;
 import client.Client;
 
 /**
@@ -25,10 +31,12 @@ import client.Client;
  * @author David
  */
 public class FileServerSocketThread implements Runnable, IFileServer {
+	private Socket socket;
+	private ObjectInputStream inStream = null;
+	private ObjectOutputStream outputStream = null;
+	private FileServer server;
 
 	private boolean running;
-	private Socket socket;
-	private FileServer server;
 
 	/**
 	 * Initialize a new FileServerThread
@@ -40,51 +48,76 @@ public class FileServerSocketThread implements Runnable, IFileServer {
 	 */
 	public FileServerSocketThread(FileServer fileserver, Socket socket) {
 		this.server = fileserver;
-		this.running = true;
 		this.socket = socket;
+		this.running = true;
 	}
 
 	@Override
 	public void run() {
 		try {
 
-			ObjectInputStream inStream = new ObjectInputStream(
-					socket.getInputStream());
-			ObjectOutputStream outputStream = new ObjectOutputStream(
-					socket.getOutputStream());
+			this.inStream = new ObjectInputStream(socket.getInputStream());
+			this.outputStream = new ObjectOutputStream(socket.getOutputStream());
 
 			while (running) {
+
 				RequestTO request = (RequestTO) inStream.readObject();
 
 				Response response = null;
 
 				switch (request.getType()) {
-
+				case List:
+					response = list();
+					break;
+				case File:
+					response = download((DownloadFileRequest) request
+							.getRequest());
+					break;
+				case Upload:
+					response = upload((UploadRequest) request.getRequest());
+					break;
+				case Version:
+					response = version((VersionRequest) request.getRequest());
+					break;
 				default:
-					response = new MessageResponse("PARTY!");
+					response = new MessageResponse("ERROR!");
 					break;
 				}
 				outputStream.writeObject(response);
 			}
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.exit(1); // TODO clean shutdown of thread
+		} catch (EOFException e) {
+			running = false;
 		} catch (ClassNotFoundException e) {
 			e.printStackTrace();
 			System.exit(1);
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(1); // TODO clean shutdown of thread
+		} finally {
+			try {
+				socket.close();
+				inStream.close();
+				outputStream.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 
 	@Override
 	public Response list() throws IOException {
-		// TODO implement list
-		return null;
+		return new ListResponse(new LinkedHashSet<String>(Arrays.asList(server
+				.getFileNames())));
 	}
 
 	@Override
 	public Response download(DownloadFileRequest request) throws IOException {
-		// TODO implement download
-		return null;
+		DownloadTicket ticket = request.getTicket();
+		byte[] content = FileUtils.getFile(server.getPath(),
+				ticket.getFilename());
+		DownloadFileResponse response = new DownloadFileResponse(ticket,
+				content);
+		return response;
 	}
 
 	@Override
@@ -95,13 +128,19 @@ public class FileServerSocketThread implements Runnable, IFileServer {
 
 	@Override
 	public Response version(VersionRequest request) throws IOException {
-		// TODO implement version
-		return null;
+		int version = 0;
+
+		FileInfo f = server.getFileInfo(request.getFilename());
+		if (f == null)
+			return new VersionResponse(request.getFilename(), 0);
+		return new VersionResponse(request.getFilename(), version);
 	}
 
 	@Override
 	public MessageResponse upload(UploadRequest request) throws IOException {
-		// TODO implement upload
+
+		server.persist(request);
+
 		return null;
 	}
 

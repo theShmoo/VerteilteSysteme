@@ -7,18 +7,27 @@ import cli.Command;
 
 /**
  * Implements the {@link IFileServerCli}
- * @history 11.10.2013
- * @version 11.10.2013 version X.X
+ * 
  * @author David
  */
 public class FileServerCli implements IFileServerCli {
 
+	private FileServer server;
+
+	/**
+	 * Initialize a new FileServerCli
+	 * @param fileServer
+	 *            the fileServer underlying the CLI
+	 */
+	public FileServerCli(FileServer fileServer) {
+		this.server = fileServer;
+	}
+
 	@Override
 	@Command
-	public
-	MessageResponse exit() throws IOException {
-		// TODO implement !exit command
-		return null;
+	public MessageResponse exit() throws IOException {
+		server.close();
+		return new MessageResponse("Shutting down file server now");
 	}
 
 }

@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import message.Response;
 import message.request.ListRequest;
@@ -26,6 +25,7 @@ import model.UserLoginInfo;
 import server.FileServer;
 import util.Config;
 import util.SingleServerSocketCommunication;
+import util.ThreadUtils;
 import cli.Shell;
 
 /**
@@ -35,7 +35,6 @@ import cli.Shell;
 public class Proxy implements Runnable {
 
 	private Shell shell;
-	private Config proxyConfig;
 	private ProxyCli proxyCli;
 	private ExecutorService executor;
 
@@ -46,13 +45,18 @@ public class Proxy implements Runnable {
 	private Set<UserLoginInfo> users;
 	private Map<FileServerInfo, Long> fileservers;
 
+	// Threads
+	private ProxyDatagramSocketThread udpHandler;
+	private FileServerGarbageCollector fsChecker;
+	private ServerSocket serverSocket;
+	private List<ProxyServerSocketThread> proxyTcpHandlers;
 	private boolean running;
 
 	/**
 	 * Initialize a new Proxy
 	 */
 	public Proxy() {
-		init(new Shell("Proxy", System.out, System.in));
+		init(new Shell("Proxy", System.out, System.in), new Config("proxy"));
 	}
 
 	/**
@@ -60,37 +64,33 @@ public class Proxy implements Runnable {
 	 * 
 	 * @param shell
 	 *            the {@link Shell} of the Proxy
+	 * @param config
 	 */
-	public Proxy(Shell shell) {
-		init(shell);
+	public Proxy(Shell shell, Config config) {
+		init(shell, config);
 	}
 
-	private void init(Shell shell) {
-		getProxyData();
-
+	private void init(Shell shell, Config config) {
+		this.executor = ThreadUtils.getExecutor();
 		this.shell = shell;
-		this.proxyCli = new ProxyCli(this);
-		this.executor = Executors.newCachedThreadPool();
 		this.running = true;
+
+		getProxyData(config);
+		this.proxyCli = new ProxyCli(this);
+		this.proxyTcpHandlers = new ArrayList<ProxyServerSocketThread>();
 	}
 
-	private void getProxyData() {
+	private void getProxyData(Config config) {
 		try {
-			this.proxyConfig = new Config("proxy");
-			this.tcpPort = proxyConfig.getInt("tcp.port");
-			this.udpPort = proxyConfig.getInt("udp.port");
-			this.fsTimeout = proxyConfig.getInt("fileserver.timeout");
-			this.fsCheckPeriod = proxyConfig.getInt("fileserver.checkPeriod");
+			this.tcpPort = config.getInt("tcp.port");
+			this.udpPort = config.getInt("udp.port");
+			this.fsTimeout = config.getInt("fileserver.timeout");
+			this.fsCheckPeriod = config.getInt("fileserver.checkPeriod");
 		} catch (NumberFormatException e) {
 			System.out
 					.println("The configuration file \"proxy.properties\" is invalid! \n\r");
 			e.printStackTrace();
-			try {
-				proxyCli.exit();
-			} catch (IOException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
+			close();
 		}
 		this.fileservers = new HashMap<FileServerInfo, Long>();
 		this.users = getUsers();
@@ -118,12 +118,7 @@ public class Proxy implements Runnable {
 								+ username
 								+ " of the configuration file \"user.properties\" is invalid! \n\r");
 				e.printStackTrace();
-				try {
-					proxyCli.exit();
-				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
+				close();
 			}
 		}
 		return users;
@@ -146,21 +141,27 @@ public class Proxy implements Runnable {
 
 		executor.execute(shell);
 		// Starting the DatagramSocket
-		executor.execute(new ProxyDatagramSocketThread(this));
+		udpHandler = new ProxyDatagramSocketThread(this);
+		executor.execute(udpHandler);
 		// Starting the Garbage Collector for the fileservers
-		executor.execute(new FileServerGarbageCollector(fileservers, fsTimeout,
-				fsCheckPeriod));
+		fsChecker = new FileServerGarbageCollector(fileservers, fsTimeout,
+				fsCheckPeriod);
+		executor.execute(fsChecker);
 		// Starting the ServerSocket
-		try (ServerSocket serverSocket = new ServerSocket(tcpPort)) {
+		try {
+			serverSocket = new ServerSocket(tcpPort);
 			while (running) {
-				executor.execute(new ProxyServerSocketThread(this, serverSocket
-						.accept()));
+				ProxyServerSocketThread newest = new ProxyServerSocketThread(
+						this, serverSocket.accept());
+				proxyTcpHandlers.add(newest);
+				executor.execute(newest);
 			}
-		}
-
-		catch (IOException e) {
-			e.printStackTrace();
-			System.exit(1);
+		} catch (IOException e) {
+			if (running)
+				e.printStackTrace();
+			// else it is ok
+		} finally {
+			close();
 		}
 
 	}
@@ -298,31 +299,52 @@ public class Proxy implements Runnable {
 	 *            the UploadRequest from a clients
 	 */
 	public void distributeFile(UploadRequest request) {
-		
+
 		int version = 0;
 		Set<FileServerInfo> fileservers = getOnlineFileservers();
 		Set<SingleServerSocketCommunication> connections = new LinkedHashSet<SingleServerSocketCommunication>();
-		
-		for( FileServerInfo f : fileservers){
+
+		for (FileServerInfo f : fileservers) {
 			SingleServerSocketCommunication sender = new SingleServerSocketCommunication(
 					f.getPort(), f.getAddress().getHostAddress());
 			connections.add(sender);
-			Response response = sender.send(new RequestTO(new VersionRequest(request.getFilename()),
-					RequestType.Version));
-			if (response instanceof VersionResponse){
+			Response response = sender.send(new RequestTO(new VersionRequest(
+					request.getFilename()), RequestType.Version));
+			if (response instanceof VersionResponse) {
 				int curVersion = ((VersionResponse) response).getVersion();
 				version = curVersion > version ? curVersion : version;
-			} else{
-				//TODO error handling
+			} else {
+				// TODO error handling
 			}
 		}
-		
-		RequestTO requestWithVersion = new RequestTO(new UploadRequest(request.getFilename(), version, request.getContent()),RequestType.Upload);
-		
-		for( SingleServerSocketCommunication s : connections){
+
+		RequestTO requestWithVersion = new RequestTO(new UploadRequest(
+				request.getFilename(), version, request.getContent()),
+				RequestType.Upload);
+
+		for (SingleServerSocketCommunication s : connections) {
 			s.send(requestWithVersion);
 			s.close();
 		}
-		
+
+	}
+
+	/**
+	 * Closes all Sockets and Streams
+	 */
+	public void close() {
+		running = false;
+		shell.close();
+		udpHandler.close();
+		fsChecker.close();
+		for (ProxyServerSocketThread t : proxyTcpHandlers) {
+			t.close();
+		}
+		try {
+			if (!serverSocket.isClosed())
+				serverSocket.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 }

@@ -38,7 +38,7 @@ public class FileUtils {
 	 * @return the bytearray of the given file
 	 * @throws IOException
 	 */
-	public static byte[] getFile(String path, String filename)
+	public synchronized static byte[] read(String path, String filename)
 			throws IOException {
 		File file = new File(path, filename);
 		byte content[] = new byte[(int)file.length()];
@@ -82,7 +82,7 @@ public class FileUtils {
 	 * @param filename
 	 *            the filename
 	 */
-	public static void write(byte[] content, String path, String filename) {
+	public synchronized static void write(byte[] content, String path, String filename) {
 		File file = new File(path, filename);
 		FileOutputStream stream = null;
 		try {

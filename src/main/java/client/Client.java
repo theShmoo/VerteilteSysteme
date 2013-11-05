@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import message.Request;
 import message.Response;
@@ -21,6 +20,7 @@ import server.FileServer;
 import util.Config;
 import util.FileUtils;
 import util.SingleServerSocketCommunication;
+import util.ThreadUtils;
 import cli.Shell;
 
 /**
@@ -30,10 +30,9 @@ import cli.Shell;
  * @version 14.10.2013 version 0.1
  * @author David
  */
-public class Client implements IClient {
+public class Client implements IClient, Runnable {
 
 	private Shell shell;
-	private Config config;
 	private ClientCli clientCli;
 	private ExecutorService executor;
 	private SingleServerSocketCommunication clientThread;
@@ -45,40 +44,39 @@ public class Client implements IClient {
 	private int tcpPort;
 
 	// Ram data
-	List<FileInfo> files;
+	private List<FileInfo> files;
 
 	/**
 	 * Create a new Client with the given {@link Shell} for its commands
 	 * 
 	 * @param shell
 	 *            the {@link Shell}
+	 * @param config
 	 */
-	public Client(Shell shell) {
-		init(shell);
+	public Client(Shell shell, Config config) {
+		init(shell, config);
 	}
 
 	/**
 	 * Create new Client which creates a new {@link Shell} for its commands
 	 */
 	public Client() {
-		init(new Shell("Client", System.out, System.in));
+		init(new Shell("Client", System.out, System.in), new Config("client"));
 	}
 
-	private void init(Shell shell) {
-		getClientData();
-
+	private void init(Shell shell, Config config) {
+		getClientData(config);
 		this.shell = shell;
 		this.clientCli = new ClientCli(this);
-		this.executor = Executors.newCachedThreadPool();
+		this.executor = ThreadUtils.getExecutor();
 		this.clientThread = new SingleServerSocketCommunication(tcpPort,
 				proxyHost);
 		this.files = new ArrayList<FileInfo>();
 		updateFiles();
 	}
 
-	private void getClientData() {
+	private void getClientData(Config config) {
 		try {
-			this.config = new Config("client");
 			this.tcpPort = config.getInt("proxy.tcp.port");
 			this.proxyHost = config.getString("proxy.host");
 			this.downloadDir = config.getString("download.dir");
@@ -137,7 +135,8 @@ public class Client implements IClient {
 		new Client().run();
 	}
 
-	private void run() {
+	@Override
+	public void run() {
 		shell.register(clientCli);
 
 		executor.execute(shell);
@@ -233,12 +232,5 @@ public class Client implements IClient {
 		// TODO persist client
 		clientThread.close();
 		shell.close();
-		System.out.close();
-		try {
-			System.in.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		executor.shutdown();
 	}
 }

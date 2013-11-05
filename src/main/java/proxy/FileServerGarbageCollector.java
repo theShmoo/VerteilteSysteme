@@ -39,22 +39,31 @@ public class FileServerGarbageCollector implements Runnable {
 		while (running) {
 			try {
 				Thread.sleep(checkPeriod);
-				for (FileServerInfo f : fileservers.keySet()) {
-					if (f.isOnline()
-							&& fileservers.get(f) < System.currentTimeMillis()
-									- fileserverTimeout) {
-						System.out.println("Fileserver out of time!");
-						fileservers.remove(f);
-						fileservers.put(
-								new FileServerInfo(f.getAddress(), f.getPort(),
-										f.getUsage(), false), 0l);
+				synchronized (this) {
+					for (FileServerInfo f : fileservers.keySet()) {
+						if (f.isOnline()
+								&& fileservers.get(f) < System
+										.currentTimeMillis()
+										- fileserverTimeout) {
+							System.out.println("Fileserver \"" + f.getPort()
+									+ "\" out of time!");
+							fileservers.remove(f);
+							fileservers.put(new FileServerInfo(f.getAddress(),
+									f.getPort(), f.getUsage(), false), 0l);
+						}
 					}
 				}
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
+	}
+
+	/**
+	 * Closes all resources
+	 */
+	public void close() {
+		running = false;
 	}
 
 }

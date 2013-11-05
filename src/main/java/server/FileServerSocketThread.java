@@ -1,9 +1,6 @@
 package server;
 
-import java.io.EOFException;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -22,6 +19,7 @@ import model.FileInfo;
 import model.RequestTO;
 import proxy.Proxy;
 import util.FileUtils;
+import util.SocketThread;
 import client.Client;
 
 /**
@@ -30,13 +28,9 @@ import client.Client;
  * 
  * @author David
  */
-public class FileServerSocketThread implements Runnable, IFileServer {
-	private Socket socket;
-	private ObjectInputStream inStream = null;
-	private ObjectOutputStream outputStream = null;
-	private FileServer server;
+public class FileServerSocketThread extends SocketThread implements IFileServer {
 
-	private boolean running;
+	private FileServer server;
 
 	/**
 	 * Initialize a new FileServerThread
@@ -47,60 +41,52 @@ public class FileServerSocketThread implements Runnable, IFileServer {
 	 *            the Socket
 	 */
 	public FileServerSocketThread(FileServer fileserver, Socket socket) {
+		super(socket);
 		this.server = fileserver;
-		this.socket = socket;
-		this.running = true;
 	}
 
 	@Override
 	public void run() {
 		try {
 
-			this.inStream = new ObjectInputStream(socket.getInputStream());
-			this.outputStream = new ObjectOutputStream(socket.getOutputStream());
-
 			while (running) {
 
-				RequestTO request = (RequestTO) inStream.readObject();
+				Object input = receive();
 
+				RequestTO request = null;
 				Response response = null;
 
-				switch (request.getType()) {
-				case List:
-					response = list();
-					break;
-				case File:
-					response = download((DownloadFileRequest) request
-							.getRequest());
-					break;
-				case Upload:
-					response = upload((UploadRequest) request.getRequest());
-					break;
-				case Version:
-					response = version((VersionRequest) request.getRequest());
-					break;
-				default:
-					response = new MessageResponse("ERROR!");
-					break;
+				if (!(input instanceof RequestTO)) {
+					// major error
+				} else {
+					request = (RequestTO) input;
+
+					switch (request.getType()) {
+					case List:
+						response = list();
+						break;
+					case File:
+						response = download((DownloadFileRequest) request
+								.getRequest());
+						break;
+					case Upload:
+						response = upload((UploadRequest) request.getRequest());
+						break;
+					case Version:
+						response = version((VersionRequest) request
+								.getRequest());
+						break;
+					default:
+						response = new MessageResponse("ERROR!");
+						break;
+					}
 				}
-				outputStream.writeObject(response);
+				send(response);
 			}
-		} catch (EOFException e) {
-			running = false;
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
-			System.exit(1);
 		} catch (IOException e) {
 			e.printStackTrace();
-			System.exit(1); // TODO clean shutdown of thread
 		} finally {
-			try {
-				socket.close();
-				inStream.close();
-				outputStream.close();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+			close();
 		}
 	}
 
@@ -113,8 +99,7 @@ public class FileServerSocketThread implements Runnable, IFileServer {
 	@Override
 	public Response download(DownloadFileRequest request) throws IOException {
 		DownloadTicket ticket = request.getTicket();
-		byte[] content = FileUtils.getFile(server.getPath(),
-				ticket.getFilename());
+		byte[] content = FileUtils.read(server.getPath(), ticket.getFilename());
 		DownloadFileResponse response = new DownloadFileResponse(ticket,
 				content);
 		return response;
@@ -143,5 +128,4 @@ public class FileServerSocketThread implements Runnable, IFileServer {
 
 		return null;
 	}
-
 }

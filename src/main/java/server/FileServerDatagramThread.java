@@ -29,7 +29,7 @@ public class FileServerDatagramThread implements Runnable {
 			socket = new DatagramSocket();
 		} catch (SocketException e) {
 			e.printStackTrace();
-			System.exit(1);
+			close();
 		}
 	}
 
@@ -37,19 +37,27 @@ public class FileServerDatagramThread implements Runnable {
 	public void run() {
 		try {
 			while (running) {
-				socket.send(packet);
 				Thread.sleep(alive);
+				socket.send(packet);
 			}
 		} catch (IOException e) {
-			running = false;
-			e.printStackTrace();
+			if(running)
+				e.printStackTrace();
 		} catch (InterruptedException e) {
-			running = false;
 			e.printStackTrace();
 		} finally {
-			socket.close();
+			close();
 		}
 
+	}
+
+	/**
+	 * Closes all open streams and sockets
+	 */
+	public void close() {
+		running = false;
+		if (!socket.isClosed())
+			socket.close();
 	}
 
 }

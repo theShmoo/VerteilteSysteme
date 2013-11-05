@@ -1,9 +1,6 @@
 package proxy;
 
-import java.io.EOFException;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.Set;
 
@@ -23,6 +20,7 @@ import model.DownloadTicket;
 import model.FileServerInfo;
 import model.RequestTO;
 import model.UserLoginInfo;
+import util.SocketThread;
 import client.Client;
 
 /**
@@ -30,12 +28,8 @@ import client.Client;
  * 
  * @author David
  */
-public class ProxyServerSocketThread implements Runnable, IProxy {
-	private Socket socket = null;
-	private ObjectInputStream inStream = null;
-	private ObjectOutputStream outputStream = null;
+public class ProxyServerSocketThread extends SocketThread implements IProxy {
 	private Proxy proxy;
-	private boolean running;
 
 	// User
 	private UserLoginInfo user;
@@ -50,73 +44,65 @@ public class ProxyServerSocketThread implements Runnable, IProxy {
 	 *            the socket
 	 */
 	public ProxyServerSocketThread(Proxy proxy, Socket socket) {
+		super(socket);
 		this.proxy = proxy;
-		this.running = true;
-		this.socket = socket;
 	}
 
+	@Override
 	public void run() {
 
 		try {
 
-			this.inStream = new ObjectInputStream(socket.getInputStream());
-			this.outputStream = new ObjectOutputStream(socket.getOutputStream());
-
 			while (running) {
-				RequestTO request = (RequestTO) inStream.readObject();
+				Object input = receive();
 
+				RequestTO request = null;
 				Response response = null;
 
-				switch (request.getType()) {
-				case Login:
-					LoginRequest loginRequest = (LoginRequest) request
-							.getRequest();
-					response = login(loginRequest);
-					break;
-				case Logout:
-					response = logout();
-					break;
-				case Credits:
-					response = credits();
-					break;
-				case Buy:
-					response = buy((BuyRequest) request.getRequest());
-					break;
-				case Ticket:
-					response = download((DownloadTicketRequest) request
-							.getRequest());
-					break;
-				case List:
-					response = list();
-					break;
-				case File:
-					// TODO File (what the hell is that shit)
-					break;
-				case Upload:
-					upload((UploadRequest) request.getRequest());
-					break;
-				default:
-					// TODO wrong object received
-					break;
+				if (!(input instanceof RequestTO)) {
+					// major error
+				} else {
+					request = (RequestTO) input;
+
+					switch (request.getType()) {
+					case Login:
+						LoginRequest loginRequest = (LoginRequest) request
+								.getRequest();
+						response = login(loginRequest);
+						break;
+					case Logout:
+						response = logout();
+						break;
+					case Credits:
+						response = credits();
+						break;
+					case Buy:
+						response = buy((BuyRequest) request.getRequest());
+						break;
+					case Ticket:
+						response = download((DownloadTicketRequest) request
+								.getRequest());
+						break;
+					case List:
+						response = list();
+						break;
+					case File:
+						// TODO File (what the hell is that shit)
+						break;
+					case Upload:
+						upload((UploadRequest) request.getRequest());
+						break;
+					default:
+						response = new MessageResponse("ERROR!");
+						break;
+					}
 				}
-				outputStream.writeObject(response);
+				send(response);
 			}
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
-			System.exit(1);
-		} catch (EOFException e) {
-			running = false;
 		} catch (IOException e) {
 			e.printStackTrace();
-			System.exit(1);
 		} finally {
-			try {
-				socket.close();
-				inStream.close();
-				outputStream.close();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+			close();
 		}
 	}
 

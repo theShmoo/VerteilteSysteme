@@ -8,71 +8,72 @@ import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
-import message.Response;
 import message.request.UploadRequest;
 import model.FileInfo;
 import util.Config;
 import util.FileUtils;
+import util.ThreadUtils;
 import cli.Shell;
 
 /**
  * 
  * @author David
  */
-public class FileServer {
+public class FileServer implements Runnable {
 
 	private Shell shell;
-	private Config config;
 	private FileServerCli serverCli;
 	private ExecutorService executor;
 
 	// FileServer properties
-	private String name = "";
 	private long alive;
 	private File folder;
 	private int tcpPort;
 	private int udpPort;
 	private String proxyHost = "";
 
+	private FileServerDatagramThread udpHandler;
+	private List<FileServerSocketThread> fileserverTcpHandlers;
+
 	private boolean running;
 
 	// Ram data
-	List<FileInfo> files;
+	private List<FileInfo> files;
+	private ServerSocket serverSocket;
 
 	/**
 	 * Initialize a new fileserver with a {@link Shell}
 	 * 
 	 * @param shell
+	 * @param config
 	 */
-	public FileServer(Shell shell) {
-		init(shell);
+	public FileServer(Shell shell, Config config) {
+		init(shell, config);
 	}
 
 	/**
 	 * Initialize a new fileserver
 	 */
 	public FileServer() {
-		// TODO name of fileserver dynamically
-		name = "fs1";
-		init(new Shell("fs1", System.out, System.in));
+		init(new Shell("fs1", System.out, System.in), new Config("fs1"));
 	}
 
-	private void init(Shell shell) {
-		this.shell = shell;
-		this.serverCli = new FileServerCli();
-		executor = Executors.newCachedThreadPool();
+	private void init(Shell shell, Config config) {
+		this.executor = ThreadUtils.getExecutor();
 
-		getServerData();
+		this.shell = shell;
 		this.running = true;
+
+		getServerData(config);
+		this.serverCli = new FileServerCli(this);
 		this.files = new ArrayList<FileInfo>();
+		this.fileserverTcpHandlers = new ArrayList<FileServerSocketThread>();
 		updateFiles();
 	}
 
-	private void getServerData() {
+	private void getServerData(Config config) {
 		try {
-			this.config = new Config(name);
 			this.tcpPort = config.getInt("tcp.port");
 			this.udpPort = config.getInt("proxy.udp.port");
 			this.proxyHost = config.getString("proxy.host");
@@ -82,11 +83,7 @@ public class FileServer {
 			System.out
 					.println("The configuration file \"client.properties\" is invalid! \n\r");
 			e.printStackTrace();
-			try {
-				serverCli.exit();
-			} catch (IOException e1) {
-				e1.printStackTrace();
-			}
+			close();
 		}
 	}
 
@@ -138,38 +135,41 @@ public class FileServer {
 		new FileServer().run();
 	}
 
-	private void run() {
+	@Override
+	public void run() {
 
-		shell.register(new FileServerCli());
+		shell.register(serverCli);
+		executor.execute(shell);
 
+		// Create the Datagram packet to send via UDP
+		String aliveMessage = "!alive " + String.valueOf(tcpPort);
+		byte[] buf = aliveMessage.getBytes();
+		
 		try {
-
-			String aliveMessage = "!alive " + String.valueOf(tcpPort);
-			System.out.println(aliveMessage);
-
-			// send request
-			byte[] buf = aliveMessage.getBytes();
 			InetAddress address = InetAddress.getByName(proxyHost);
 			DatagramPacket packet = new DatagramPacket(buf, buf.length,
 					address, udpPort);
 
-			executor.execute(new FileServerDatagramThread(packet, alive));
-			System.out.println("File Server UDP sending machine is running");
-
+			udpHandler = new FileServerDatagramThread(packet, alive);
+			executor.execute(udpHandler); // start the UDP sending Machine!
 		} catch (IOException e) {
 			e.printStackTrace();
-			System.exit(1);
 		}
 
 		// Starting the ServerSocket
-		try (ServerSocket serverSocket = new ServerSocket(tcpPort)) {
+		try {
+			serverSocket = new ServerSocket(tcpPort);
 			while (running) {
-				executor.execute(new FileServerSocketThread(this, serverSocket
-						.accept()));
+				FileServerSocketThread newThread = new FileServerSocketThread(
+						this, serverSocket.accept());
+				fileserverTcpHandlers.add(newThread);
+				executor.execute(newThread);
 			}
 		} catch (IOException e) {
-			e.printStackTrace();
-			System.exit(1);
+			if (running)
+				e.printStackTrace();
+		} finally {
+			close();
 		}
 	}
 
@@ -196,5 +196,23 @@ public class FileServer {
 	 */
 	public void persist(UploadRequest request) {
 		FileUtils.write(request.getContent(), getPath(), request.getFilename());
+	}
+
+	/**
+	 * Closes all open Streams and Sockets
+	 */
+	public void close() {
+		running = false;
+		shell.close();
+		udpHandler.close();
+		for (FileServerSocketThread t : fileserverTcpHandlers) {
+			t.close();
+		}
+		try {
+			if (!serverSocket.isClosed())
+				serverSocket.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 }

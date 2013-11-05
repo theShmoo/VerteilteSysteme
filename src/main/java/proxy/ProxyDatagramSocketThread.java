@@ -1,30 +1,45 @@
 package proxy;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.SocketException;
 
+/**
+ * This Thread listens to incoming udp packets from file servers and contacts
+ * the proxy that they are alive
+ * 
+ * @author David
+ */
 public class ProxyDatagramSocketThread implements Runnable {
-	protected BufferedReader in = null;
-	protected boolean running;
+	private boolean running;
 	private int udpPort;
 	private Proxy proxy;
-	DatagramSocket socket;
-	
+	private DatagramSocket socket;
+
+	/**
+	 * initialize a new Socket that listens on the udp port
+	 * 
+	 * @param proxy
+	 *            the proxy
+	 */
 	public ProxyDatagramSocketThread(Proxy proxy) {
 		this.udpPort = proxy.getUdpPort();
 		this.proxy = proxy;
 		this.running = true;
-		socket = null;
+		try {
+			this.socket = new DatagramSocket(udpPort);
+		} catch (SocketException e) {
+			e.printStackTrace();
+		}
 	}
 
 	@Override
 	public void run() {
 
 		try {
-			socket = new DatagramSocket(udpPort);
+
 			byte[] buf = new byte[256];
 			DatagramPacket packet = new DatagramPacket(buf, buf.length);
 
@@ -34,10 +49,10 @@ public class ProxyDatagramSocketThread implements Runnable {
 				sendIsAlive(packet);
 			}
 		} catch (IOException e) {
-			e.printStackTrace();
-			System.exit(1);
-		} finally{
-			socket.close();
+			if(!socket.isClosed())
+				e.printStackTrace();
+		} finally {
+			close();
 		}
 	}
 
@@ -59,9 +74,18 @@ public class ProxyDatagramSocketThread implements Runnable {
 				}
 
 			} catch (NumberFormatException e) {
-				e.printStackTrace();
-				System.exit(1);
+				//Wrong package received Clam down and carry on
 			}
+		}
+	}
+
+	/**
+	 * Closes all resources
+	 */
+	public void close() {
+		running = false;
+		if(!socket.isClosed()){
+			socket.close();
 		}
 	}
 }

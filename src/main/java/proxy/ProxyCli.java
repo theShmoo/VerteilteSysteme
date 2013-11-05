@@ -45,8 +45,8 @@ public class ProxyCli implements IProxyCli {
 	@Override
 	@Command
 	public MessageResponse exit() throws IOException {
-		// TODO implement !exit command
-		return null;
+		proxy.close();
+		return new MessageResponse("Shutting down proxy now");
 	}
 
 }

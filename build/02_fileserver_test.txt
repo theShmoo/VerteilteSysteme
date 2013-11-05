@@ -1,0 +1,18 @@
+*	startProxy proxy
+*	startFileServer fs1
+*	startFileServer fs2
+
+
+proxy:	!fileservers
+fs1:	!exit
+proxy:	!fileservers
+fs2:	!exit
+proxy:	!fileservers
+
+*	startFileServer fs1
+
+proxy:	!fileservers
+
+proxy:	!exit
+
+

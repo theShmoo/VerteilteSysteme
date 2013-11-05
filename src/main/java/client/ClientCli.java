@@ -28,7 +28,8 @@ import cli.Command;
  */
 public class ClientCli implements IClientCli {
 
-	Client client = null;
+	private Client client = null;
+	private boolean login;
 
 	/**
 	 * Create a new Client Command Line Interface
@@ -38,6 +39,7 @@ public class ClientCli implements IClientCli {
 	 */
 	public ClientCli(Client client) {
 		this.client = client;
+		this.login = false;
 	}
 
 	/*
@@ -48,10 +50,10 @@ public class ClientCli implements IClientCli {
 	@Override
 	@Command
 	public LoginResponse login(String username, String password) {
-
 		LoginRequest data = new LoginRequest(username, password);
 		RequestTO request = new RequestTO(data, RequestType.Login);
 		LoginResponse respond = (LoginResponse) client.send(request);
+		login = true;
 		return respond;
 	}
 
@@ -122,9 +124,9 @@ public class ClientCli implements IClientCli {
 	@Command
 	public MessageResponse upload(String filename) throws IOException {
 		UploadRequest data = new UploadRequest(filename,
-				client.getVersion(filename), FileUtils.getFile(
-						client.getPath(), filename));
-		RequestTO request = new RequestTO(data,RequestType.Upload);
+				client.getVersion(filename), FileUtils.read(client.getPath(),
+						filename));
+		RequestTO request = new RequestTO(data, RequestType.Upload);
 		return (MessageResponse) client.send(request);
 	}
 
@@ -138,7 +140,10 @@ public class ClientCli implements IClientCli {
 	public MessageResponse logout() throws IOException {
 		RequestTO request = new RequestTO(new LogoutRequest(),
 				RequestType.Logout);
-		return (MessageResponse) client.send(request);
+
+		MessageResponse response = (MessageResponse) client.send(request);
+		login = false;
+		return response;
 	}
 
 	/*
@@ -149,9 +154,23 @@ public class ClientCli implements IClientCli {
 	@Override
 	@Command
 	public MessageResponse exit() throws IOException {
-		logout();
+		StringBuilder exitMessage = new StringBuilder();
+		if (login) {
+			exitMessage.append(logout().getMessage()).append("\n");
+			login = false;
+		}
 		client.exit();
-		return new MessageResponse("Shutting down client now");
+		exitMessage.append("Shutting down client now");
+		return new MessageResponse(exitMessage.toString());
+	}
+
+	/**
+	 * Returns <code>true</code> if the user is logged in
+	 * 
+	 * @return <code>true</code> if the user is logged in
+	 */
+	public boolean getLoggedIn() {
+		return login;
 	}
 
 }

@@ -31,8 +31,9 @@ public class SingleServerSocketCommunication{
 	 *            the port of the connection
 	 * @param host
 	 *            the host of the connection
+	 * @throws IOException 
 	 */
-	public SingleServerSocketCommunication(int port, String host) {
+	public SingleServerSocketCommunication(int port, String host) throws IOException{
 		this.host = host;
 		this.port = port;
 		this.running = true;
@@ -43,12 +44,7 @@ public class SingleServerSocketCommunication{
 		} catch (UnknownHostException e) {
 			System.err.println("Don't know about host " + host);
 			close();
-		} catch (IOException e) {
-			System.err
-					.println("Couldn't get I/O for the connection to " + host);
-			e.printStackTrace();
-			close();
-		}
+		} 
 	}
 
 	/**

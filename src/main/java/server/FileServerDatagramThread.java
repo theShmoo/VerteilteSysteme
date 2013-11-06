@@ -37,8 +37,8 @@ public class FileServerDatagramThread implements Runnable {
 	public void run() {
 		try {
 			while (running) {
-				Thread.sleep(alive);
 				socket.send(packet);
+				Thread.sleep(alive);
 			}
 		} catch (IOException e) {
 			if(running)

@@ -11,6 +11,7 @@ import message.request.InfoRequest;
 import message.request.UploadRequest;
 import message.request.VersionRequest;
 import message.response.DownloadFileResponse;
+import message.response.InfoResponse;
 import message.response.ListResponse;
 import message.response.MessageResponse;
 import message.response.VersionResponse;
@@ -76,6 +77,9 @@ public class FileServerSocketThread extends SocketThread implements IFileServer 
 						response = version((VersionRequest) request
 								.getRequest());
 						break;
+					case Info:
+						response = info((InfoRequest) request.getRequest());
+						break;
 					default:
 						response = new MessageResponse("ERROR!");
 						break;
@@ -99,6 +103,7 @@ public class FileServerSocketThread extends SocketThread implements IFileServer 
 	@Override
 	public Response download(DownloadFileRequest request) throws IOException {
 		DownloadTicket ticket = request.getTicket();
+		//TODO checksum
 		byte[] content = FileUtils.read(server.getPath(), ticket.getFilename());
 		DownloadFileResponse response = new DownloadFileResponse(ticket,
 				content);
@@ -107,8 +112,12 @@ public class FileServerSocketThread extends SocketThread implements IFileServer 
 
 	@Override
 	public Response info(InfoRequest request) throws IOException {
-		// TODO implement info
-		return null;
+		FileInfo f = server.getFileInfo(request.getFilename());
+		if (f == null) {
+			return new MessageResponse("The file \"" + request.getFilename()
+					+ "\" does not exist!");
+		}
+		return new InfoResponse(request.getFilename(), f.getFilesize());
 	}
 
 	@Override
@@ -126,6 +135,6 @@ public class FileServerSocketThread extends SocketThread implements IFileServer 
 
 		server.persist(request);
 
-		return null;
+		return new MessageResponse("File successfully uploaded.");
 	}
 }

@@ -50,9 +50,10 @@ public class FileUtils {
 			fin = new FileInputStream(file);
 			// Reads up to certain bytes of data from this input stream into an array of bytes.
 			fin.read(content);
+			
 		}
 		catch (FileNotFoundException e) {
-			System.out.println("File not found" + e);
+			return null;
 		}
 		catch (IOException ioe) {
 			System.out.println("Exception while reading file " + ioe);

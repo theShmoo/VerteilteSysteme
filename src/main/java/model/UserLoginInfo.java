@@ -1,5 +1,7 @@
 package model;
 
+import message.request.UploadRequest;
+
 /**
  * The User Info with password
  * 
@@ -97,6 +99,26 @@ public class UserLoginInfo {
 	 */
 	public void addCredits(long credits) {
 		this.credits += credits;
+	}
+
+	/**
+	 * Adds credits to the user
+	 * 
+	 * @param request
+	 *            the upload request credits
+	 */
+	public void addCredits(UploadRequest request) {
+		this.credits += request.getContent().length;
+	}
+
+	/**
+	 * Removes Credits from the user
+	 * 
+	 * @param credits
+	 *            the credits to remove
+	 */
+	public void removeCredits(long credits) {
+		this.credits -= credits;
 	}
 
 }

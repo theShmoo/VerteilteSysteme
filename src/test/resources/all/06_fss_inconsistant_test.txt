@@ -1,0 +1,15 @@
+%Fileservers inconsistant test
+*	startProxy proxy
+*	startClient client
+*	startFileServer fs1
+
+client:	!login alice 12345
+client:	!download short.txt
+client:	!upload data.txt
+client:	!credits
+*	startFileServer fs2
+client:	!download data.txt
+fs2:	!exit
+fs1:	!exit
+proxy:	!exit
+client:	!exit

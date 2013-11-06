@@ -1,0 +1,34 @@
+%Showing all sorts of credits operations
+*	startProxy proxy
+*	startClient client
+*	startFileServer fs1
+*	startFileServer fs2
+
+proxy:	!users
+client:	!login alice 12345
+client:	!credits
+
+client: !list
+client:	!download short.txt
+proxy:	!users
+client: !credits
+
+client:	!download long.txt
+client: !buy 1000
+client:	!download long.txt
+proxy:	!users
+client: !credits
+
+client: !ls
+client: !upload upload.txt
+proxy:	!users
+client: !credits
+
+proxy:	!fileservers
+
+client: !logout
+client:	!exit
+fs1:	!exit
+fs2:	!exit
+proxy:	!exit
+

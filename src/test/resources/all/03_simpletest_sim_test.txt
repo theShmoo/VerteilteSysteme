@@ -1,0 +1,16 @@
+%Simulation of SimpleTest.java with just the commands
+*	startProxy proxy
+*	startClient client
+*	startFileServer fs1
+
+client:	!login alice 12345
+client: !credits
+client: !download short.txt
+client: !credits
+client: !upload upload.txt
+client: !credits
+client: !logout
+proxy:	!exit
+fs1:	!exit
+client:	!exit
+

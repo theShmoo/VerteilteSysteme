@@ -69,8 +69,20 @@ public class Client implements IClient, Runnable {
 		this.shell = shell;
 		this.clientCli = new ClientCli(this);
 		this.executor = ThreadUtils.getExecutor();
-		this.clientThread = new SingleServerSocketCommunication(tcpPort,
-				proxyHost);
+		
+		shell.register(clientCli);
+		executor.execute(shell);
+		try {
+			this.clientThread = new SingleServerSocketCommunication(tcpPort,
+					proxyHost);
+		} catch (IOException e) {
+			try {
+				shell.writeLine("The System is offline! Please try again later");
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+		}
 		this.files = new ArrayList<FileInfo>();
 		updateFiles();
 	}
@@ -137,9 +149,7 @@ public class Client implements IClient, Runnable {
 
 	@Override
 	public void run() {
-		shell.register(clientCli);
-
-		executor.execute(shell);
+		
 	}
 
 	/**
@@ -183,8 +193,15 @@ public class Client implements IClient, Runnable {
 	 *         error Message if something went wrong
 	 */
 	public Response download(DownloadTicket ticket) {
-		SingleServerSocketCommunication clientToFileServer = new SingleServerSocketCommunication(
-				ticket.getPort(), proxyHost);
+		SingleServerSocketCommunication clientToFileServer = null;
+		try {
+			clientToFileServer = new SingleServerSocketCommunication(
+					ticket.getPort(), proxyHost);
+		} catch (IOException e) {
+			return new MessageResponse("The server \"" + proxyHost
+					+ "\" with the port " + tcpPort
+					+ " does not answer! Please try again later!");
+		}
 		Response response = clientToFileServer.send(new RequestTO(
 				new DownloadFileRequest(ticket), RequestType.File));
 		clientToFileServer.close();
@@ -219,10 +236,14 @@ public class Client implements IClient, Runnable {
 	 * 
 	 * @param filename
 	 *            the filename
-	 * @return the version of the file with the given filename
+	 * @return the version of the file with the given filename or -1 if the file does not exist
 	 */
 	public int getVersion(String filename) {
-		return getFile(filename).getVersion();
+		FileInfo file = getFile(filename);
+		if(file == null){
+			return -1;
+		}
+		return file.getVersion();
 	}
 
 	/**

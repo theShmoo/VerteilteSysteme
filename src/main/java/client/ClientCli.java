@@ -123,9 +123,11 @@ public class ClientCli implements IClientCli {
 	@Override
 	@Command
 	public MessageResponse upload(String filename) throws IOException {
-		UploadRequest data = new UploadRequest(filename,
-				client.getVersion(filename), FileUtils.read(client.getPath(),
-						filename));
+		byte[] content = FileUtils.read(client.getPath(),filename);
+		if (content == null){
+			return new MessageResponse("The file \""+filename+"\" does not exist");
+		}
+		UploadRequest data = new UploadRequest(filename,client.getVersion(filename),content);
 		RequestTO request = new RequestTO(data, RequestType.Upload);
 		return (MessageResponse) client.send(request);
 	}

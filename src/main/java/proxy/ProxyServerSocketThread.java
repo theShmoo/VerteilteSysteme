@@ -12,6 +12,7 @@ import message.request.UploadRequest;
 import message.response.BuyResponse;
 import message.response.CreditsResponse;
 import message.response.DownloadTicketResponse;
+import message.response.InfoResponse;
 import message.response.ListResponse;
 import message.response.LoginResponse;
 import message.response.LoginResponse.Type;
@@ -90,7 +91,7 @@ public class ProxyServerSocketThread extends SocketThread implements IProxy {
 						// TODO File (what the hell is that shit)
 						break;
 					case Upload:
-						upload((UploadRequest) request.getRequest());
+						response = upload((UploadRequest) request.getRequest());
 						break;
 					default:
 						response = new MessageResponse("ERROR!");
@@ -155,6 +156,16 @@ public class ProxyServerSocketThread extends SocketThread implements IProxy {
 	public Response download(DownloadTicketRequest request) throws IOException {
 		if (userCheck()) {
 			FileServerInfo server = proxy.getFileserver();
+			if (server == null) {
+				return new MessageResponse(
+						"We are sorry! There is currently no online file server! Try again later!");
+			}
+			Response info = proxy.getFileInfo(server, request.getFilename());
+			if (info instanceof InfoResponse) {
+				user.removeCredits(((InfoResponse) info).getSize());
+			} else {
+				return info;
+			}
 
 			DownloadTicket ticket = new DownloadTicket(user.getName(),
 					request.getFilename(), "checksum", server.getAddress(),
@@ -169,6 +180,10 @@ public class ProxyServerSocketThread extends SocketThread implements IProxy {
 	public MessageResponse upload(UploadRequest request) throws IOException {
 		if (userCheck()) {
 			proxy.distributeFile(request);
+			user.addCredits(request);
+			return new MessageResponse(
+					"File successfully uploaded.\n\rYou now have "
+							+ user.getCredits() + " credits.");
 		}
 		return new MessageResponse("No user is authenticated!");
 	}
@@ -180,6 +195,7 @@ public class ProxyServerSocketThread extends SocketThread implements IProxy {
 			return new MessageResponse("User \"" + user.getName()
 					+ "\" logged out!");
 		}
-		return new MessageResponse("Logout failed!");
+		return new MessageResponse(
+				"Logout failed! The user was already offline");
 	}
 }

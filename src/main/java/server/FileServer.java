@@ -34,7 +34,7 @@ public class FileServer implements Runnable {
 	private String proxyHost = "";
 
 	private FileServerDatagramThread udpHandler;
-	private List<FileServerSocketThread> fileserverTcpHandlers;
+	private List<FileServerSocketThread> fileServerTcpHandlers;
 
 	private boolean running;
 
@@ -68,7 +68,7 @@ public class FileServer implements Runnable {
 		getServerData(config);
 		this.serverCli = new FileServerCli(this);
 		this.files = new ArrayList<FileInfo>();
-		this.fileserverTcpHandlers = new ArrayList<FileServerSocketThread>();
+		this.fileServerTcpHandlers = new ArrayList<FileServerSocketThread>();
 		updateFiles();
 	}
 
@@ -117,6 +117,7 @@ public class FileServer implements Runnable {
 	 * @return the {@link FileInfo} to the given filename
 	 */
 	public FileInfo getFileInfo(String filename) {
+		updateFiles();
 		for (FileInfo f : files) {
 			if (f.getFilename().equals(filename)) {
 				return f;
@@ -162,7 +163,7 @@ public class FileServer implements Runnable {
 			while (running) {
 				FileServerSocketThread newThread = new FileServerSocketThread(
 						this, serverSocket.accept());
-				fileserverTcpHandlers.add(newThread);
+				fileServerTcpHandlers.add(newThread);
 				executor.execute(newThread);
 			}
 		} catch (IOException e) {
@@ -205,7 +206,7 @@ public class FileServer implements Runnable {
 		running = false;
 		shell.close();
 		udpHandler.close();
-		for (FileServerSocketThread t : fileserverTcpHandlers) {
+		for (FileServerSocketThread t : fileServerTcpHandlers) {
 			t.close();
 		}
 		try {

@@ -1,0 +1,11 @@
+%Starting Proxy->Client->Fileserver -- Shutdown Fileserver->Proxy->Client
+*	startProxy proxy
+*	startClient client
+*	startFileServer fs1
+
+client:	!login bill 23456
+client: !download short.txt
+fs1:	!exit
+proxy:	!exit
+client:	!exit
+

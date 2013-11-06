@@ -1,0 +1,29 @@
+%2 Clients doing operations over the proxy
+*	startProxy proxy
+*	startClient client
+*	startClient client1
+*	startFileServer fs1
+
+proxy:	!users
+
+client:	!login alice 12345
+client:	!credits
+
+proxy:	!users
+
+client1:	!login bill 23456
+client1:	!credits
+
+proxy:	!users
+
+client1:	!upload upload.txt
+client1:	!credits
+
+client:	!download upload.txt
+client:	!credits
+
+
+proxy:	!exit
+client:	!exit
+client1:	!exit
+fs1:	!exit

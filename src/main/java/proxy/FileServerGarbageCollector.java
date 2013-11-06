@@ -1,15 +1,15 @@
 package proxy;
 
-import java.util.Map;
+import java.util.Set;
 
-import model.FileServerInfo;
+import model.FileServerStatusInfo;
 
 /**
  * @author David
  */
 public class FileServerGarbageCollector implements Runnable {
 
-	private Map<FileServerInfo, Long> fileservers;
+	private Set<FileServerStatusInfo> fileservers;
 	private long fileserverTimeout;
 	private long checkPeriod;
 	private boolean running;
@@ -26,7 +26,7 @@ public class FileServerGarbageCollector implements Runnable {
 	 * @param checkPeriod
 	 *            the period to check
 	 */
-	public FileServerGarbageCollector(Map<FileServerInfo, Long> fileservers,
+	public FileServerGarbageCollector(Set<FileServerStatusInfo> fileservers,
 			long fileserverTimeout, long checkPeriod) {
 		this.fileservers = fileservers;
 		this.fileserverTimeout = fileserverTimeout;
@@ -39,20 +39,16 @@ public class FileServerGarbageCollector implements Runnable {
 		while (running) {
 			try {
 				Thread.sleep(checkPeriod);
-				synchronized (this) {
-					for (FileServerInfo f : fileservers.keySet()) {
-						if (f.isOnline()
-								&& fileservers.get(f) < System
-										.currentTimeMillis()
+					for(FileServerStatusInfo f : fileservers){
+						if (f.isOnline() && f.getActive() < System.currentTimeMillis()
 										- fileserverTimeout) {
 							System.out.println("Fileserver \"" + f.getPort()
 									+ "\" out of time!");
-							fileservers.remove(f);
-							fileservers.put(new FileServerInfo(f.getAddress(),
-									f.getPort(), f.getUsage(), false), 0l);
+							f.setOnline(false);
+						} else{
+							f.setOnline(true);
 						}
 					}
-				}
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}

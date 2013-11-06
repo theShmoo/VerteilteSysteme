@@ -1,0 +1,11 @@
+%Checking output for a not existing file
+*	startProxy proxy
+*	startClient client
+*	startFileServer fs1
+
+client:	!login alice 12345
+client:	!download notexistingfile.txt
+
+proxy:	!exit
+client:	!exit
+fs1:	!exit

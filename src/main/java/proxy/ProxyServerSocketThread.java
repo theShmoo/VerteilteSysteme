@@ -156,13 +156,31 @@ public class ProxyServerSocketThread extends SocketThread implements IProxy {
 	public Response download(DownloadTicketRequest request) throws IOException {
 		if (userCheck()) {
 			FileServerInfo server = proxy.getFileserver();
+			long size = 0l;
+			
+			//case 1: there is no server
 			if (server == null) {
 				return new MessageResponse(
 						"We are sorry! There is currently no online file server! Try again later!");
 			}
+			
 			Response info = proxy.getFileInfo(server, request.getFilename());
+			//case 2: server exists and returns a valid info of the file
 			if (info instanceof InfoResponse) {
-				user.removeCredits(((InfoResponse) info).getSize());
+				size = ((InfoResponse) info).getSize();
+				//case 3: user has enough Credits! everything is fine!
+				if (user.hasEnoughCredits(size)) {
+					user.removeCredits(size);
+				//case 4: the user does not have enough credits
+				} else {
+					return new MessageResponse(
+							"Sry! You have too less credits!\nYou have "
+									+ user.getCredits()
+									+ " credits and you need " + size
+									+ " credits! To buy credits type: \"!buy "
+									+ (size - user.getCredits()) + "\"");
+				}
+			//case 5: The server exists but does not return a valid info (maybe file does not exist)
 			} else {
 				return info;
 			}
@@ -171,6 +189,8 @@ public class ProxyServerSocketThread extends SocketThread implements IProxy {
 					request.getFilename(), "checksum", server.getAddress(),
 					server.getPort());
 			DownloadTicketResponse respond = new DownloadTicketResponse(ticket);
+			// everything worked well the user gets his ticket so we can rank the fileserver as working
+			proxy.addServerUsage(server,size);
 			return respond;
 		}
 		return new MessageResponse("No user is authenticated!");
@@ -193,7 +213,7 @@ public class ProxyServerSocketThread extends SocketThread implements IProxy {
 		if (userCheck()) {
 			user.setOffline();
 			return new MessageResponse("User \"" + user.getName()
-					+ "\" logged out!");
+					+ "\" successfully logged out!");
 		}
 		return new MessageResponse(
 				"Logout failed! The user was already offline");

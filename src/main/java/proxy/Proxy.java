@@ -4,14 +4,18 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import message.Response;
 import message.request.DownloadFileRequest;
@@ -21,7 +25,6 @@ import message.request.UploadRequest;
 import message.request.VersionRequest;
 import message.response.DownloadFileResponse;
 import message.response.ListResponse;
-import message.response.MessageResponse;
 import message.response.VersionResponse;
 import model.DownloadTicket;
 import model.FileServerInfo;
@@ -33,7 +36,7 @@ import model.UserLoginInfo;
 import server.FileServer;
 import util.Config;
 import util.SingleServerSocketCommunication;
-import util.ThreadUtils;
+import util.UserLoader;
 import cli.Shell;
 
 /**
@@ -55,7 +58,7 @@ public class Proxy implements Runnable {
 
 	// Threads
 	private ProxyDatagramSocketThread udpHandler;
-	private FileServerGarbageCollector fsChecker;
+	private Timer fsChecker;
 	private ServerSocket serverSocket;
 	private List<ProxyServerSocketThread> proxyTcpHandlers;
 	private boolean running;
@@ -82,12 +85,18 @@ public class Proxy implements Runnable {
 	}
 
 	private void init(Shell shell, Config config) {
-		this.executor = ThreadUtils.getExecutor();
+		this.executor = Executors.newCachedThreadPool();
+
+		this.proxyCli = new ProxyCli(this);
+
 		this.shell = shell;
+		shell.register(proxyCli);
+		executor.execute(shell);
+
 		this.running = true;
 
 		getProxyData(config);
-		this.proxyCli = new ProxyCli(this);
+
 		this.proxyTcpHandlers = new ArrayList<ProxyServerSocketThread>();
 		this.fileVersionMap = new ConcurrentHashMap<String, Integer>();
 	}
@@ -99,11 +108,15 @@ public class Proxy implements Runnable {
 			this.fsTimeout = config.getInt("fileserver.timeout");
 			this.fsCheckPeriod = config.getInt("fileserver.checkPeriod");
 		} catch (NumberFormatException e) {
-			System.out
-					.println("The configuration file \"proxy.properties\" is invalid! \n\r");
+			try {
+				shell.writeLine("The configuration file \"proxy.properties\" is invalid! \n\r");
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
 			close();
 		}
-		this.fileservers = new HashSet<FileServerStatusInfo>();
+		this.fileservers = Collections
+				.synchronizedSet(new HashSet<FileServerStatusInfo>());
 		this.users = getUsers();
 	}
 
@@ -113,10 +126,7 @@ public class Proxy implements Runnable {
 
 		Config userConfig = new Config("user");
 
-		// XXX maybe get them dynamically
-		List<String> usernames = new ArrayList<String>();
-		usernames.add("alice");
-		usernames.add("bill");
+		Set<String> usernames = UserLoader.load();
 
 		for (String username : usernames) {
 			try {
@@ -140,23 +150,25 @@ public class Proxy implements Runnable {
 	 * @param args
 	 *            no args are used
 	 */
-	public static void main(String... args) {
+	public static void main(String[] args) {
 		new Proxy().run();
 	}
 
 	@Override
 	public void run() {
-
-		shell.register(proxyCli);
-
-		executor.execute(shell);
 		// Starting the DatagramSocket
 		udpHandler = new ProxyDatagramSocketThread(this);
 		executor.execute(udpHandler);
 		// Starting the Garbage Collector for the fileservers
-		fsChecker = new FileServerGarbageCollector(fileservers, fsTimeout,
-				fsCheckPeriod);
-		executor.execute(fsChecker);
+		TimerTask action = new TimerTask() {
+			public void run() {
+				checkOnline();
+			}
+		};
+
+		fsChecker = new Timer();
+		fsChecker.schedule(action, 0, fsTimeout);
+		
 		// Starting the ServerSocket
 		try {
 			serverSocket = new ServerSocket(tcpPort);
@@ -171,7 +183,8 @@ public class Proxy implements Runnable {
 				e.printStackTrace();
 			// else it is ok
 		} finally {
-			close();
+			if (running)
+				close();
 		}
 
 	}
@@ -181,7 +194,8 @@ public class Proxy implements Runnable {
 	 * 
 	 * @return all fileservers
 	 */
-	public Set<FileServerInfo> getFileServerInfos() {
+	public synchronized Set<FileServerInfo> getFileServerInfos() {
+		checkOnline();
 		Set<FileServerInfo> set = new HashSet<FileServerInfo>();
 		for (FileServerStatusInfo f : fileservers) {
 			set.add(f.getModel());
@@ -234,7 +248,6 @@ public class Proxy implements Runnable {
 		if (newServer) {
 			fileservers.add(new FileServerStatusInfo(adress, fileServerTCPPort,
 					0, true));
-			// TODO maybe not 0 latency on start
 			try {
 				syncFileservers();
 			} catch (IOException e) {
@@ -283,10 +296,26 @@ public class Proxy implements Runnable {
 		long usage = Long.MAX_VALUE;
 		FileServerStatusInfo best = null;
 		for (FileServerStatusInfo f : getOnlineFileservers()) {
-			usage = f.getUsage() < usage ? f.getUsage() : usage;
-			best = f;
+			if (f.getUsage() < usage) {
+				usage = f.getUsage();
+				best = f;
+			}
 		}
 		return best;
+	}
+	
+	/**
+	 * Checks all fileservers if they are online
+	 */
+	public void checkOnline(){
+		for (FileServerStatusInfo f : fileservers) {
+			if (f.isOnline()
+					&& System.currentTimeMillis() - f.getActive() > fsCheckPeriod) {
+				f.setOffline();
+			} else {
+				f.setOnline();
+			}
+		}
 	}
 
 	/**
@@ -296,6 +325,7 @@ public class Proxy implements Runnable {
 	 */
 	public Set<FileServerStatusInfo> getOnlineFileservers() {
 		Set<FileServerStatusInfo> onlineServers = new LinkedHashSet<FileServerStatusInfo>();
+		checkOnline();
 		for (FileServerStatusInfo f : fileservers) {
 			if (f.isOnline()) {
 				onlineServers.add(f);
@@ -312,7 +342,6 @@ public class Proxy implements Runnable {
 	 */
 	public Set<String> getFiles() throws IOException {
 		syncFileservers();
-		getFileserverWithStatus();
 		return getFiles(getFileserverWithStatus());
 	}
 
@@ -391,7 +420,7 @@ public class Proxy implements Runnable {
 						fileVersionMap.put(file, version);
 						updateFiles.put(file, f);
 					}
-				}else{
+				} else {
 					fileVersionMap.put(file, version);
 					updateFiles.put(file, f);
 				}
@@ -464,38 +493,64 @@ public class Proxy implements Runnable {
 	 * @return the size of the file or null if the file does not exist
 	 */
 	public Response getFileInfo(FileServerInfo server, String filename) {
-		SingleServerSocketCommunication sender = null;
-		try {
-			sender = new SingleServerSocketCommunication(server.getPort(),
-					server.getAddress().getHostAddress());
-		} catch (IOException e) {
-			return new MessageResponse("The file server \""
-					+ server.getAddress() + "\" with the port "
-					+ server.getPort()
-					+ " does not answer! Please try again later!");
-		}
-		Response response = sender.send(new RequestTO(
+		SingleServerSocketCommunication sender = new SingleServerSocketCommunication(server.getPort(),
+					server.getAddress().getHostAddress());		
+		return sender.send(new RequestTO(
 				new InfoRequest(filename), RequestType.Info));
-		sender.close();
-		return response;
 	}
 
 	/**
 	 * Closes all Sockets and Streams
 	 */
 	public synchronized void close() {
-		running = false;
-		shell.close();
-		udpHandler.close();
-		fsChecker.close();
-		for (ProxyServerSocketThread t : proxyTcpHandlers) {
-			t.close();
+			running = false;
+			if (executor != null)
+				executor.shutdown();
+			if (udpHandler != null)
+				udpHandler.close();
+			if (fsChecker != null)
+				fsChecker.cancel();
+			for (ProxyServerSocketThread t : proxyTcpHandlers) {
+				// t != null
+				t.close();
+			}
+			try {
+				if (serverSocket != null && !serverSocket.isClosed())
+					serverSocket.close();
+				System.in.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			if (executor != null)
+				executor.shutdownNow();
+			if (shell != null)
+				shell.close();
+	}
+
+	/**
+	 * Adds the usage to the specified server
+	 * 
+	 * @param server
+	 *            the {@link FileServer} as info model
+	 * @param usage
+	 *            the usage or the size of file
+	 */
+	public void addServerUsage(FileServerInfo server, long usage) {
+		FileServerStatusInfo f = getFileServer(server);
+		if (f != null) {
+			getFileServer(server).addUsage(usage);
 		}
-		try {
-			if (!serverSocket.isClosed())
-				serverSocket.close();
-		} catch (IOException e) {
-			e.printStackTrace();
+	}
+
+	/**
+	 * @param server
+	 */
+	private FileServerStatusInfo getFileServer(FileServerInfo server) {
+		for (FileServerStatusInfo f : fileservers) {
+			if (f.equalsFileServerInfo(server)) {
+				return f;
+			}
 		}
+		return null;
 	}
 }

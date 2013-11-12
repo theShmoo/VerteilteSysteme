@@ -13,8 +13,6 @@ import cli.Command;
 /**
  * Implementation of the {@link IProxyCli}
  * 
- * @history 11.10.2013
- * @version 11.10.2013 version 0.1
  * @author David
  */
 public class ProxyCli implements IProxyCli {

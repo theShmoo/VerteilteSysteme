@@ -1,10 +1,10 @@
 package proxy;
 
-import cli.Command;
+import java.io.IOException;
+
 import message.Response;
 import message.response.MessageResponse;
-
-import java.io.IOException;
+import cli.Command;
 
 /**
  * This interface defines the functionality for the proxy.

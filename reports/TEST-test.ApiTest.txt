@@ -1,1 +1,152 @@
 Testsuite: test.ApiTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 42,103 sec
+------------- Standard Output ---------------
+02_fileserver_test.txt
+15:43:59.293		proxy> !fileservers
+15:43:59.298		proxy:
+15:43:59.298		1. 127.0.0.1       10183 online              0
+15:43:59.298		2. 127.0.0.1       10182 online              0
+15:43:59.792		fs1> !exit
+15:43:59.793		fs1: Shutting down file server now
+15:43:59.794		fs1: Shell closed
+15:44:00.292		proxy> !fileservers
+15:44:00.293		proxy:
+15:44:00.293		1. 127.0.0.1       10183 online              0
+15:44:00.293		2. 127.0.0.1       10182 online              0
+15:44:00.792		fs2> !exit
+15:44:00.794		fs2: Shutting down file server now
+15:44:00.795		fs2: Shell closed
+15:44:01.293		proxy> !fileservers
+15:44:01.294		proxy:
+15:44:01.294		1. 127.0.0.1       10182 online              0
+15:44:01.294		2. 127.0.0.1       10183 online              0
+15:44:03.795		proxy> !fileservers
+15:44:03.795		proxy:
+15:44:03.795		1. 127.0.0.1       10183 online              0
+15:44:03.795		2. 127.0.0.1       10182 online              0
+15:44:04.296		fs1> !exit
+15:44:04.297		fs1: Shutting down file server now
+15:44:04.298		fs1: Shell closed
+15:44:04.797		proxy> !exit
+15:44:04.798		proxy: Shutting down proxy now
+15:44:04.799		proxy: Shell closed
+################################################################################
+03_simpletest_sim_test.txt
+Simulation of SimpleTest.java with just the commands
+--------------------------------------------------------------------------------
+15:44:11.315		client> !login alice 12345
+15:44:11.323		client: !login success
+15:44:11.816		client> !credits
+15:44:11.822		client: !credits 200
+15:44:12.317		client> !download short.txt
+15:44:12.338		client: !data dslab13
+15:44:12.817		client> !credits
+15:44:12.818		client: !credits 192
+15:44:13.318		client> !upload upload.txt
+15:44:13.323		client:
+15:44:13.323		File successfully uploaded.
+15:44:13.323		You now have 242 credits.
+15:44:13.819		client> !credits
+15:44:13.820		client: !credits 242
+15:44:14.319		client> !logout
+15:44:14.323		client: User "alice" logged out!
+15:44:14.819		proxy> !exit
+15:44:14.821		proxy: Shutting down proxy now
+15:44:14.822		proxy: Shell closed
+15:44:15.320		fs1> !exit
+15:44:15.321		fs1: Shutting down file server now
+15:44:15.323		fs1: Shell closed
+15:44:15.820		client> !exit
+15:44:15.821		client: Shutting down client now
+15:44:15.822		client: Shell closed
+################################################################################
+11_usecase_buy_credits_test.txt
+Showing all sorts of credits operations
+--------------------------------------------------------------------------------
+15:44:24.332		proxy> !users
+15:44:24.336		proxy:
+15:44:24.336		1. bill            offline           200
+15:44:24.336		2. alice           offline           200
+15:44:24.832		client> !login alice 12345
+15:44:24.836		client: !login success
+15:44:25.333		client> !credits
+15:44:25.334		client: !credits 200
+15:44:25.833		client> !list
+15:44:25.849		client:
+15:44:25.849		data.txt
+15:44:25.849		long.txt
+15:44:25.849		notexistingfile.txt
+15:44:25.849		short.txt
+15:44:25.849		upload.txt
+15:44:26.334		client> !download short.txt
+15:44:26.346		client: !data dslab13
+15:44:26.834		proxy> !users
+15:44:26.835		proxy:
+15:44:26.835		1. bill            offline           200
+15:44:26.835		2. alice           online            192
+15:44:27.335		client> !credits
+15:44:27.336		client: !credits 192
+15:44:27.835		client> !download long.txt
+15:44:27.839		client:
+15:44:27.839		Sry! You have too less credits!
+15:44:27.839		You have 192 credits and you need 1000 credits! To buy credits type: "!buy 808"
+15:44:28.336		client> !buy 1000
+15:44:28.346		client: !credits 1192
+15:44:28.837		client> !download long.txt
+15:44:28.847		client:
+15:44:28.847		!data ###################################################################################################
+15:44:28.847		###################################################################################################
+15:44:28.847		###################################################################################################
+15:44:28.847		###################################################################################################
+15:44:28.847		###################################################################################################
+15:44:28.847		###################################################################################################
+15:44:28.847		###################################################################################################
+15:44:28.847		###################################################################################################
+15:44:28.847		###################################################################################################
+15:44:28.847		###################################################################################################
+15:44:29.337		proxy> !users
+15:44:29.338		proxy:
+15:44:29.338		1. bill            offline           200
+15:44:29.338		2. alice           online            192
+15:44:29.838		client> !credits
+15:44:29.839		client: !credits 192
+15:44:30.338		client> !ls
+15:44:30.340		client:
+15:44:30.340		java.lang.IllegalArgumentException: Command '!ls' not registered.
+15:44:30.340			at cli.Shell.invoke(Shell.java:226)
+15:44:30.340			at cli.Shell.run(Shell.java:71)
+15:44:30.340			at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1145)
+15:44:30.340			at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:615)
+15:44:30.340			at java.lang.Thread.run(Thread.java:744)
+15:44:30.838		client> !upload upload.txt
+15:44:30.845		client:
+15:44:30.845		File successfully uploaded.
+15:44:30.845		You now have 242 credits.
+15:44:31.339		proxy> !users
+15:44:31.340		proxy:
+15:44:31.340		1. bill            offline           200
+15:44:31.340		2. alice           online            242
+15:44:31.840		client> !credits
+15:44:31.841		client: !credits 242
+15:44:32.340		proxy> !fileservers
+15:44:32.341		proxy:
+15:44:32.341		1. 127.0.0.1       10182 online              8
+15:44:32.341		2. 127.0.0.1       10183 online           1000
+15:44:32.841		client> !logout
+15:44:32.842		client: User "alice" logged out!
+15:44:33.341		client> !exit
+15:44:33.342		client: Shutting down client now
+15:44:33.343		client: Shell closed
+15:44:33.841		fs1> !exit
+15:44:33.842		fs1: Shutting down file server now
+15:44:33.843		fs1: Shell closed
+15:44:34.342		fs2> !exit
+15:44:34.343		fs2: Shutting down file server now
+15:44:34.343		fs2: Shell closed
+15:44:34.842		proxy> !exit
+15:44:34.843		proxy: Shutting down proxy now
+15:44:34.844		proxy: Shell closed
+################################################################################
+------------- ---------------- ---------------
+
+Testcase: test took 42,093 sec

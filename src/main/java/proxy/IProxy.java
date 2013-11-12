@@ -1,13 +1,14 @@
 package proxy;
 
+import java.io.IOException;
+
 import message.Response;
 import message.request.BuyRequest;
 import message.request.DownloadTicketRequest;
 import message.request.LoginRequest;
 import message.request.UploadRequest;
-import message.response.*;
-
-import java.io.IOException;
+import message.response.LoginResponse;
+import message.response.MessageResponse;
 
 /**
  * This interface defines the functionality for the proxy.

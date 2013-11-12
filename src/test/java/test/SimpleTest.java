@@ -84,7 +84,7 @@ public class SimpleTest {
 		assertTrue(String.format("Response must contain '%s' but was '%s'", expected, actual), actual.contains(expected));
 
 		actual = client.logout().toString();
-		expected = "Successfully logged out.";
+		expected = "successfully logged out.";
 		assertTrue(String.format("Response must contain '%s' but was '%s'", expected, actual), actual.contains(expected));
 	}
 }

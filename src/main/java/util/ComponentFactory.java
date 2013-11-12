@@ -1,6 +1,7 @@
 package util;
 
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import proxy.IProxyCli;
 import proxy.Proxy;
@@ -18,7 +19,7 @@ import client.IClientCli;
  */
 public class ComponentFactory {
 	
-	private ExecutorService executor = ThreadUtils.getExecutor();
+	private ExecutorService executor = Executors.newCachedThreadPool();
 
 	/**
 	 * Creates and starts a new client instance using the provided {@link Config} and {@link Shell}.

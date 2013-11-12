@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 
 import message.Request;
 import message.Response;
@@ -20,7 +19,6 @@ import server.FileServer;
 import util.Config;
 import util.FileUtils;
 import util.SingleServerSocketCommunication;
-import util.ThreadUtils;
 import cli.Shell;
 
 /**
@@ -34,7 +32,6 @@ public class Client implements IClient, Runnable {
 
 	private Shell shell;
 	private ClientCli clientCli;
-	private ExecutorService executor;
 	private SingleServerSocketCommunication clientThread;
 
 	// Client properties
@@ -68,21 +65,11 @@ public class Client implements IClient, Runnable {
 		getClientData(config);
 		this.shell = shell;
 		this.clientCli = new ClientCli(this);
-		this.executor = ThreadUtils.getExecutor();
-		
+
 		shell.register(clientCli);
-		executor.execute(shell);
-		try {
-			this.clientThread = new SingleServerSocketCommunication(tcpPort,
-					proxyHost);
-		} catch (IOException e) {
-			try {
-				shell.writeLine("The System is offline! Please try again later");
-			} catch (IOException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
-		}
+
+		this.clientThread = new SingleServerSocketCommunication(tcpPort,
+				proxyHost);
 		this.files = new ArrayList<FileInfo>();
 		updateFiles();
 	}
@@ -143,12 +130,29 @@ public class Client implements IClient, Runnable {
 	 * @param args
 	 *            no args are used
 	 */
-	public static void main(String... args) {
+	public static void main(String[] args) {
 		new Client().run();
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Runnable#run()
+	 */
 	@Override
 	public void run() {
+		
+		try {
+			clientThread.holdConnectionOpen();
+		} catch (IOException e) {
+			try {
+				shell.writeLine("The System is offline! Please try again later");
+				exit();
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
+		}
+		shell.run();
 		
 	}
 
@@ -193,18 +197,10 @@ public class Client implements IClient, Runnable {
 	 *         error Message if something went wrong
 	 */
 	public Response download(DownloadTicket ticket) {
-		SingleServerSocketCommunication clientToFileServer = null;
-		try {
-			clientToFileServer = new SingleServerSocketCommunication(
-					ticket.getPort(), proxyHost);
-		} catch (IOException e) {
-			return new MessageResponse("The server \"" + proxyHost
-					+ "\" with the port " + tcpPort
-					+ " does not answer! Please try again later!");
-		}
+		SingleServerSocketCommunication clientToFileServer = new SingleServerSocketCommunication(
+				ticket.getPort(), proxyHost);
 		Response response = clientToFileServer.send(new RequestTO(
 				new DownloadFileRequest(ticket), RequestType.File));
-		clientToFileServer.close();
 
 		if (response instanceof DownloadFileResponse) {
 			DownloadFileResponse download = (DownloadFileResponse) response;
@@ -228,6 +224,7 @@ public class Client implements IClient, Runnable {
 	 * @return the file infos
 	 */
 	public List<FileInfo> getFiles() {
+		updateFiles();
 		return files;
 	}
 
@@ -236,11 +233,12 @@ public class Client implements IClient, Runnable {
 	 * 
 	 * @param filename
 	 *            the filename
-	 * @return the version of the file with the given filename or -1 if the file does not exist
+	 * @return the version of the file with the given filename or -1 if the file
+	 *         does not exist
 	 */
 	public int getVersion(String filename) {
 		FileInfo file = getFile(filename);
-		if(file == null){
+		if (file == null) {
 			return -1;
 		}
 		return file.getVersion();
@@ -250,8 +248,14 @@ public class Client implements IClient, Runnable {
 	 * Closes all Threads and shuts down the client
 	 */
 	public void exit() {
-		// TODO persist client
-		clientThread.close();
-		shell.close();
+		if (clientThread != null)
+			clientThread.close();
+		try {
+			System.in.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		if (shell != null)
+			shell.close();
 	}
 }

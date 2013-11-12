@@ -45,7 +45,7 @@ public class UserLoginInfo {
 	 * 
 	 * @return the credits of the user
 	 */
-	public long getCredits() {
+	public synchronized long getCredits() {
 		return credits;
 	}
 
@@ -64,21 +64,21 @@ public class UserLoginInfo {
 	 * @param credits
 	 *            the new credits of the user
 	 */
-	public void setCredits(long credits) {
+	public synchronized void setCredits(long credits) {
 		this.credits = credits;
 	}
 
 	/**
 	 * Set the user Online
 	 */
-	public void setOnline() {
+	public synchronized void setOnline() {
 		this.online = true;
 	}
 
 	/**
 	 * Set the user Offline
 	 */
-	public void setOffline() {
+	public synchronized void setOffline() {
 		this.online = false;
 	}
 
@@ -87,7 +87,7 @@ public class UserLoginInfo {
 	 * 
 	 * @return the user online status
 	 */
-	public boolean isOnline() {
+	public synchronized boolean isOnline() {
 		return online;
 	}
 
@@ -97,7 +97,7 @@ public class UserLoginInfo {
 	 * @param credits
 	 *            the credits
 	 */
-	public void addCredits(long credits) {
+	public synchronized void addCredits(long credits) {
 		this.credits += credits;
 	}
 
@@ -107,8 +107,8 @@ public class UserLoginInfo {
 	 * @param request
 	 *            the upload request credits
 	 */
-	public void addCredits(UploadRequest request) {
-		this.credits += request.getContent().length;
+	public synchronized void addCredits(UploadRequest request) {
+		this.credits += request.getContent().length*2;
 	}
 
 	/**
@@ -117,8 +117,16 @@ public class UserLoginInfo {
 	 * @param credits
 	 *            the credits to remove
 	 */
-	public void removeCredits(long credits) {
+	public synchronized void removeCredits(long credits) {
 		this.credits -= credits;
+	}
+
+	/**
+	 * @param size
+	 * @return TODO
+	 */
+	public synchronized boolean hasEnoughCredits(long size) {
+		return size < credits;
 	}
 
 }

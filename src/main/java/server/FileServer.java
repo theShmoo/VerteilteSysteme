@@ -2,18 +2,19 @@ package server;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.BindException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import message.request.UploadRequest;
 import model.FileInfo;
 import util.Config;
 import util.FileUtils;
-import util.ThreadUtils;
 import cli.Shell;
 
 /**
@@ -54,13 +55,16 @@ public class FileServer implements Runnable {
 
 	/**
 	 * Initialize a new fileserver
+	 * 
+	 * @param name
+	 *            the name of the fileserver
 	 */
-	public FileServer() {
-		init(new Shell("fs1", System.out, System.in), new Config("fs1"));
+	public FileServer(String name) {
+		init(new Shell(name, System.out, System.in), new Config(name));
 	}
 
 	private void init(Shell shell, Config config) {
-		this.executor = ThreadUtils.getExecutor();
+		this.executor = Executors.newCachedThreadPool();
 
 		this.shell = shell;
 		this.running = true;
@@ -132,8 +136,9 @@ public class FileServer implements Runnable {
 	 * @param args
 	 *            no args are used
 	 */
-	public static void main(String... args) {
-		new FileServer().run();
+	public static void main(String[] args) {
+
+		new FileServer(args[0]).run();
 	}
 
 	@Override
@@ -145,7 +150,7 @@ public class FileServer implements Runnable {
 		// Create the Datagram packet to send via UDP
 		String aliveMessage = "!alive " + String.valueOf(tcpPort);
 		byte[] buf = aliveMessage.getBytes();
-		
+
 		try {
 			InetAddress address = InetAddress.getByName(proxyHost);
 			DatagramPacket packet = new DatagramPacket(buf, buf.length,
@@ -166,11 +171,19 @@ public class FileServer implements Runnable {
 				fileServerTcpHandlers.add(newThread);
 				executor.execute(newThread);
 			}
+		} catch (BindException e) {
+			try {
+				shell.writeLine("The port " + tcpPort + " is already in use!");
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
 		} catch (IOException e) {
-			if (running)
+			if (running) {
 				e.printStackTrace();
+			}
 		} finally {
-			close();
+			if (running)
+				close();
 		}
 	}
 
@@ -193,6 +206,8 @@ public class FileServer implements Runnable {
 	}
 
 	/**
+	 * TODO desription
+	 * 
 	 * @param request
 	 */
 	public void persist(UploadRequest request) {
@@ -203,17 +218,29 @@ public class FileServer implements Runnable {
 	 * Closes all open Streams and Sockets
 	 */
 	public void close() {
-		running = false;
-		shell.close();
-		udpHandler.close();
-		for (FileServerSocketThread t : fileServerTcpHandlers) {
-			t.close();
-		}
-		try {
-			if (!serverSocket.isClosed())
-				serverSocket.close();
-		} catch (IOException e) {
-			e.printStackTrace();
+		// XXX note that the if the fileserver is not closed but started again
+		// then the port blocks...
+		synchronized (this) {
+			running = false;
+			if (executor != null)
+				executor.shutdown();
+			if (udpHandler != null)
+				udpHandler.close();
+			for (FileServerSocketThread t : fileServerTcpHandlers) {
+				// t is not null
+				t.close();
+			}
+			try {
+				if (serverSocket != null && !serverSocket.isClosed())
+					serverSocket.close();
+				System.in.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			if (executor != null)
+				executor.shutdownNow();
+			if (shell != null)
+				shell.close();
 		}
 	}
 }

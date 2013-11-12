@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
+import java.util.Timer;
+import java.util.TimerTask;
 
 /**
  * A FileServerDatagramThread sends a Datagram packet in a specified time
@@ -16,39 +18,43 @@ public class FileServerDatagramThread implements Runnable {
 	private DatagramSocket socket;
 	private long alive;
 	private boolean running;
+	private Timer udpSender;
+	private TimerTask action;
 
 	/**
 	 * @param packet
 	 * @param alive
 	 */
-	public FileServerDatagramThread(DatagramPacket packet, long alive) {
+	public FileServerDatagramThread(final DatagramPacket packet, long alive) {
 		this.packet = packet;
 		this.alive = alive;
 		this.running = true;
+
+		
 		try {
 			socket = new DatagramSocket();
 		} catch (SocketException e) {
 			e.printStackTrace();
 			close();
 		}
+		
+		action = new TimerTask() {
+			public void run() {
+				try {
+					socket.send(packet);
+				} catch (IOException e) {
+					if (running)
+						e.printStackTrace();
+				}
+			}
+		};
+		
+		this.udpSender = new Timer();
 	}
 
 	@Override
 	public void run() {
-		try {
-			while (running) {
-				socket.send(packet);
-				Thread.sleep(alive);
-			}
-		} catch (IOException e) {
-			if(running)
-				e.printStackTrace();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		} finally {
-			close();
-		}
-
+		udpSender.schedule(action, 0, alive);
 	}
 
 	/**
@@ -56,8 +62,9 @@ public class FileServerDatagramThread implements Runnable {
 	 */
 	public void close() {
 		running = false;
-		if (!socket.isClosed())
+		if(udpSender != null)
+			udpSender.cancel();
+		if (socket != null)
 			socket.close();
 	}
-
 }

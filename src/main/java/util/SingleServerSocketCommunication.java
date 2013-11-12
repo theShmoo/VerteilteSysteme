@@ -15,7 +15,7 @@ import model.RequestTO;
  * 
  * @author David
  */
-public class SingleServerSocketCommunication{
+public class SingleServerSocketCommunication {
 
 	private Socket socket = null;
 	private ObjectOutputStream outputStream;
@@ -31,12 +31,14 @@ public class SingleServerSocketCommunication{
 	 *            the port of the connection
 	 * @param host
 	 *            the host of the connection
-	 * @throws IOException 
 	 */
-	public SingleServerSocketCommunication(int port, String host) throws IOException{
+	public SingleServerSocketCommunication(int port, String host) {
 		this.host = host;
 		this.port = port;
-		this.running = true;
+		this.running = false;
+	}
+
+	private void connect() throws IOException {
 		try {
 			socket = new Socket(host, port);
 			outputStream = new ObjectOutputStream(socket.getOutputStream());
@@ -44,7 +46,7 @@ public class SingleServerSocketCommunication{
 		} catch (UnknownHostException e) {
 			System.err.println("Don't know about host " + host);
 			close();
-		} 
+		}
 	}
 
 	/**
@@ -54,27 +56,36 @@ public class SingleServerSocketCommunication{
 	 * @return the response
 	 */
 	public Response send(RequestTO request) {
+
+		if (!running) {
+			try {
+				connect();
+			} catch (IOException e) {
+				return new MessageResponse("The Host \"" + host
+						+ "\" with the port " + port
+						+ " does not answer! Please try again later!");
+			}
+		}
 		Object input = null;
 		Response response = null;
-		if (running) {
-			try {
-				outputStream.writeObject(request);
-				input = inStream.readObject();
-				if (input == null) {
-					close();
-				} else {
-					response = (Response) input;
-				}
-			} catch (IOException e) {
-				return new MessageResponse("Could not write to Host \"" + host
-						+ "\" on port " + port);
-			} catch (ClassNotFoundException e) {
-				e.printStackTrace();
-				return new MessageResponse("The Response from the Host \"" + host
-						+ "\" on port " + port + " could not get interpreted");
+
+		try {
+			outputStream.writeObject(request);
+			input = inStream.readObject();
+			if (input == null) {
+				close();
+			} else {
+				response = (Response) input;
 			}
-		} else {
-			return new MessageResponse("Socket is already closed!");
+		} catch (IOException e) {
+			return new MessageResponse("Could not write to Host \"" + host
+					+ "\" on port " + port);
+		} catch (ClassNotFoundException e) {
+			return new MessageResponse("The Response from the Host \"" + host
+					+ "\" on port " + port + " could not get interpreted");
+		} finally {
+			if (!running)
+				close();
 		}
 		return response;
 	}
@@ -87,12 +98,28 @@ public class SingleServerSocketCommunication{
 	public void close() {
 		running = false;
 		try {
-			if (!socket.isClosed()) {
-				outputStream.writeObject(null);
+			if (socket != null && !socket.isClosed()) {
+				if (outputStream != null)
+					outputStream.writeObject(null);
 				socket.close();
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	/**
+	 * If you want to close your Connection by yourself you can tell the
+	 * SingleServerSocketCommunication not to open and close the connection by
+	 * itself.
+	 * 
+	 * You have to call the method close!
+	 * 
+	 * @throws IOException
+	 * 
+	 */
+	public void holdConnectionOpen() throws IOException {
+		running = true;
+		connect();
 	}
 }

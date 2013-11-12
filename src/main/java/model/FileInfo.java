@@ -93,6 +93,16 @@ public class FileInfo {
 	public void resetVersionNumber() {
 		version = 0;
 	}
+	
+	
+
+	/* (non-Javadoc)
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+	public String toString() {
+		return filename+"\t"+filesize+"\t"+version;
+	}
 
 	/*
 	 * (non-Javadoc)

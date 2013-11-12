@@ -20,7 +20,7 @@ public class ThreadUtils {
 	private static ExecutorService executor = null;
 
 	/**
-	 * Returns the CachedThreadPool
+	 * Returns the CachedThreadPool implemented as a Singleton
 	 * 
 	 * @return the CachedThreadPool
 	 */

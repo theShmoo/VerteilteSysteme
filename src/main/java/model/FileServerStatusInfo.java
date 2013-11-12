@@ -53,37 +53,47 @@ public class FileServerStatusInfo {
 	/**
 	 * @return the usage
 	 */
-	public long getUsage() {
+	public synchronized long getUsage() {
 		return usage;
 	}
 
 	/**
+	 * Returns the time the proxy last got an isActive packet from the
+	 * fileserver
+	 * 
 	 * @return the active
 	 */
-	public long getActive() {
+	public synchronized long getActive() {
 		return active;
 	}
 
 	/**
 	 * @return the online
 	 */
-	public boolean isOnline() {
+	public synchronized boolean isOnline() {
 		return online;
 	}
 
 	/**
-	 * @param online
-	 *            the online to set
+	 * Sets the Fileserver status to onle
 	 */
-	public void setOnline(boolean online) {
-		this.online = online;
+	public void setOnline() {
+		this.online = true;
+	}
+
+	/**
+	 * Sets the Fileserver status to onle
+	 */
+	public void setOffline() {
+		this.online = false;
 	}
 
 	/**
 	 * @return the sender
 	 * @throws IOException
 	 */
-	public SingleServerSocketCommunication getSender() throws IOException {
+	public synchronized SingleServerSocketCommunication getSender()
+			throws IOException {
 		if (sender == null) {
 			sender = new SingleServerSocketCommunication(port,
 					address.getHostAddress());
@@ -94,8 +104,16 @@ public class FileServerStatusInfo {
 	/**
 	 * Set the FileServerActive for some time
 	 */
-	public void setActive() {
+	public synchronized void setActive() {
 		this.active = System.currentTimeMillis();
+	}
+
+	/**
+	 * @param usage
+	 *            the usage to set
+	 */
+	public synchronized void setUsage(long usage) {
+		this.usage = usage;
 	}
 
 	/**
@@ -103,8 +121,62 @@ public class FileServerStatusInfo {
 	 * 
 	 * @return the FileServerInfo model
 	 */
-	public FileServerInfo getModel() {
+	public synchronized FileServerInfo getModel() {
 		return new FileServerInfo(address, port, usage, online);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#hashCode()
+	 */
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((address == null) ? 0 : address.hashCode());
+		result = prime * result + (online ? 1231 : 1237);
+		result = prime * result + port;
+		result = prime * result + (int) (usage ^ (usage >>> 32));
+		return result;
+	}
+
+	/**
+	 * Returns <code>true</code> if the FileServerStatusInfo equals the
+	 * FileServerInfo model
+	 * 
+	 * @param f
+	 *            the FileServerInfo
+	 * @return <code>true</code> if the FileServerStatusInfo equals the
+	 *         FileServerInfo model
+	 */
+	public synchronized boolean equalsFileServerInfo(FileServerInfo f) {
+		if (f == null) {
+			return false;
+		}
+		if (address == null) {
+			if (f.getAddress() != null) {
+				return false;
+			}
+		} else if (!address.equals(f.getAddress())) {
+			return false;
+		}
+		if (port != f.getPort()) {
+			return false;
+		}
+		if (usage != f.getUsage()) {
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * Adds usage
+	 * 
+	 * @param usage
+	 */
+	public synchronized void addUsage(long usage) {
+		this.usage += usage;
 	}
 
 }

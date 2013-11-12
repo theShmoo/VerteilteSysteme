@@ -1,6 +1,7 @@
 package client;
 
 import java.io.IOException;
+import java.util.List;
 
 import message.Response;
 import message.request.BuyRequest;
@@ -14,6 +15,7 @@ import message.response.DownloadTicketResponse;
 import message.response.LoginResponse;
 import message.response.MessageResponse;
 import model.DownloadTicket;
+import model.FileInfo;
 import model.RequestTO;
 import model.RequestType;
 import util.FileUtils;
@@ -96,6 +98,23 @@ public class ClientCli implements IClientCli {
 		return client.send(request);
 	}
 
+	/**
+	 * Returns a response containing all informations about the containing files
+	 * of the Client
+	 * 
+	 * @return the infos of the clients files
+	 * @throws IOException
+	 */
+	@Command
+	public Response ls() throws IOException {
+		List<FileInfo> files = client.getFiles();
+		StringBuilder response = new StringBuilder("name\tsize\tversion\n");
+		for (FileInfo f : files) {
+			response.append(f.toString() + "\n");
+		}
+		return new MessageResponse(response.toString());
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -123,11 +142,13 @@ public class ClientCli implements IClientCli {
 	@Override
 	@Command
 	public MessageResponse upload(String filename) throws IOException {
-		byte[] content = FileUtils.read(client.getPath(),filename);
-		if (content == null){
-			return new MessageResponse("The file \""+filename+"\" does not exist");
+		byte[] content = FileUtils.read(client.getPath(), filename);
+		if (content == null) {
+			return new MessageResponse("The file \"" + filename
+					+ "\" does not exist");
 		}
-		UploadRequest data = new UploadRequest(filename,client.getVersion(filename),content);
+		UploadRequest data = new UploadRequest(filename,
+				client.getVersion(filename), content);
 		RequestTO request = new RequestTO(data, RequestType.Upload);
 		return (MessageResponse) client.send(request);
 	}

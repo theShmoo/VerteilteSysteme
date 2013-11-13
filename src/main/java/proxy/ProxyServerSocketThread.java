@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import message.Response;
 import message.request.BuyRequest;
 import message.request.DownloadTicketRequest;
@@ -21,6 +24,7 @@ import model.DownloadTicket;
 import model.FileServerInfo;
 import model.RequestTO;
 import model.UserLoginInfo;
+import util.ChecksumUtils;
 import util.SocketThread;
 import client.Client;
 
@@ -30,10 +34,11 @@ import client.Client;
  * @author David
  */
 public class ProxyServerSocketThread extends SocketThread implements IProxy {
-	private Proxy proxy;
 
-	// User
+	private Proxy proxy;
 	private UserLoginInfo user;
+	private static final Logger LOG = LoggerFactory
+			.getLogger(ProxyServerSocketThread.class);
 
 	/**
 	 * Initialize a new ProxyServerSocketThread that handles Requests from
@@ -53,7 +58,7 @@ public class ProxyServerSocketThread extends SocketThread implements IProxy {
 	public void run() {
 
 		try {
-
+			LOG.info("start listening!");
 			while (running) {
 				Object input = receive();
 
@@ -62,42 +67,49 @@ public class ProxyServerSocketThread extends SocketThread implements IProxy {
 
 				if (!(input instanceof RequestTO)) {
 					// major error
+					LOG.error("The input is not a RequestTO!");
 				} else {
 					request = (RequestTO) input;
 
 					switch (request.getType()) {
 					case Login:
+						LOG.info("Received login Request");
 						LoginRequest loginRequest = (LoginRequest) request
 								.getRequest();
 						response = login(loginRequest);
 						break;
 					case Logout:
+						LOG.info("Received logout Request");
 						response = logout();
 						break;
 					case Credits:
+						LOG.info("Received Credits Request");
 						response = credits();
 						break;
 					case Buy:
+						LOG.info("Received Buy Request");
 						response = buy((BuyRequest) request.getRequest());
 						break;
 					case Ticket:
+						LOG.info("Received Ticket Request");
 						response = download((DownloadTicketRequest) request
 								.getRequest());
 						break;
 					case List:
+						LOG.info("Received List Request");
 						response = list();
 						break;
-					case File:
-						// TODO File (what the hell is that shit)
-						break;
 					case Upload:
+						LOG.info("Received Upload Request");
 						response = upload((UploadRequest) request.getRequest());
 						break;
 					default:
+						LOG.error("Received a Request that is not suitable for a Proxy");
 						response = new MessageResponse("ERROR!");
 						break;
 					}
 				}
+				LOG.info("Send Response");
 				send(response);
 			}
 		} catch (IOException e) {
@@ -155,23 +167,26 @@ public class ProxyServerSocketThread extends SocketThread implements IProxy {
 	@Override
 	public Response download(DownloadTicketRequest request) throws IOException {
 		if (userCheck()) {
+			String filename = request.getFilename();
 			FileServerInfo server = proxy.getFileserver();
 			long size = 0l;
-			
-			//case 1: there is no server
+			InfoResponse infoResponse = null;
+
+			// case 1: there is no server
 			if (server == null) {
 				return new MessageResponse(
 						"We are sorry! There is currently no online file server! Try again later!");
 			}
-			
-			Response info = proxy.getFileInfo(server, request.getFilename());
-			//case 2: server exists and returns a valid info of the file
+
+			Response info = proxy.getFileInfo(server, filename);
+			// case 2: server exists and returns a valid info of the file
 			if (info instanceof InfoResponse) {
-				size = ((InfoResponse) info).getSize();
-				//case 3: user has enough Credits! everything is fine!
+				infoResponse = (InfoResponse) info;
+				size = infoResponse.getSize();
+				// case 3: user has enough Credits! everything is fine!
 				if (user.hasEnoughCredits(size)) {
 					user.removeCredits(size);
-				//case 4: the user does not have enough credits
+					// case 4: the user does not have enough credits
 				} else {
 					return new MessageResponse(
 							"Sry! You have too less credits!\nYou have "
@@ -180,17 +195,20 @@ public class ProxyServerSocketThread extends SocketThread implements IProxy {
 									+ " credits! To buy credits type: \"!buy "
 									+ (size - user.getCredits()) + "\"");
 				}
-			//case 5: The server exists but does not return a valid info (maybe file does not exist)
+				// case 5: The server exists but does not return a valid info
+				// (maybe file does not exist)
 			} else {
 				return info;
 			}
 
+			String checksum = ChecksumUtils.generateChecksum(user.getName(),
+					filename, proxy.getVersion(server, filename), size);
 			DownloadTicket ticket = new DownloadTicket(user.getName(),
-					request.getFilename(), "checksum", server.getAddress(),
-					server.getPort());
+					filename, checksum, server.getAddress(), server.getPort());
 			DownloadTicketResponse respond = new DownloadTicketResponse(ticket);
-			// everything worked well the user gets his ticket so we can rank the fileserver as working
-			proxy.addServerUsage(server,size);
+			// everything worked well the user gets his ticket so we can rank
+			// the fileserver as working
+			proxy.addServerUsage(server, size);
 			return respond;
 		}
 		return new MessageResponse("No user is authenticated!");
@@ -213,9 +231,9 @@ public class ProxyServerSocketThread extends SocketThread implements IProxy {
 		if (userCheck()) {
 			user.setOffline();
 			return new MessageResponse("User \"" + user.getName()
-					+ "\" successfully logged out!");
+					+ "\" successfully logged out.");
 		}
 		return new MessageResponse(
-				"Logout failed! The user was already offline");
+				"Logout failed! The user was already offline.");
 	}
 }

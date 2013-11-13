@@ -179,4 +179,16 @@ public class FileServerStatusInfo {
 		this.usage += usage;
 	}
 
+	/* (non-Javadoc)
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+	public String toString() {
+		return "FileServerStatusInfo [address=" + address + ", port=" + port
+				+ ", usage=" + usage + ", active=" + active + ", online="
+				+ online + "]";
+	}
+	
+	
+
 }

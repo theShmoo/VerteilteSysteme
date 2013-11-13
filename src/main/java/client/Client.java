@@ -22,15 +22,14 @@ import util.SingleServerSocketCommunication;
 import cli.Shell;
 
 /**
- * Implements the interface { {@link IClient}
+ * Implements the interface {@link IClient}
  * 
- * @history 14.10.2013
- * @version 14.10.2013 version 0.1
  * @author David
  */
 public class Client implements IClient, Runnable {
 
 	private Shell shell;
+	private Thread shellThread;
 	private ClientCli clientCli;
 	private SingleServerSocketCommunication clientThread;
 
@@ -65,8 +64,8 @@ public class Client implements IClient, Runnable {
 		getClientData(config);
 		this.shell = shell;
 		this.clientCli = new ClientCli(this);
-
 		shell.register(clientCli);
+		shellThread = new Thread(shell);
 
 		this.clientThread = new SingleServerSocketCommunication(tcpPort,
 				proxyHost);
@@ -141,7 +140,7 @@ public class Client implements IClient, Runnable {
 	 */
 	@Override
 	public void run() {
-		
+		shellThread.start();
 		try {
 			clientThread.holdConnectionOpen();
 		} catch (IOException e) {
@@ -152,7 +151,7 @@ public class Client implements IClient, Runnable {
 				e1.printStackTrace();
 			}
 		}
-		shell.run();
+		
 		
 	}
 
@@ -255,6 +254,8 @@ public class Client implements IClient, Runnable {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		if(shellThread != null)
+			shellThread.interrupt();
 		if (shell != null)
 			shell.close();
 	}

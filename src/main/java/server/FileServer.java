@@ -7,7 +7,9 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -94,7 +96,7 @@ public class FileServer implements Runnable {
 	/**
 	 * Updates the files
 	 */
-	private void updateFiles() {
+	private synchronized void updateFiles() {
 
 		File[] folderfile = folder.listFiles(FileUtils.TEXTFILTER);
 
@@ -137,8 +139,14 @@ public class FileServer implements Runnable {
 	 *            no args are used
 	 */
 	public static void main(String[] args) {
-
-		new FileServer(args[0]).run();
+		String serverName = "";
+		if(args.length != 1){
+			serverName = "fs1";
+		}
+		else{
+			serverName = args[0];
+		}
+		new FileServer(serverName).run();
 	}
 
 	@Override
@@ -212,35 +220,42 @@ public class FileServer implements Runnable {
 	 */
 	public void persist(UploadRequest request) {
 		FileUtils.write(request.getContent(), getPath(), request.getFilename());
+		updateFiles();
 	}
 
 	/**
 	 * Closes all open Streams and Sockets
 	 */
-	public void close() {
+	public synchronized void close() {
 		// XXX note that the if the fileserver is not closed but started again
 		// then the port blocks...
-		synchronized (this) {
-			running = false;
-			if (executor != null)
-				executor.shutdown();
-			if (udpHandler != null)
-				udpHandler.close();
-			for (FileServerSocketThread t : fileServerTcpHandlers) {
-				// t is not null
-				t.close();
-			}
-			try {
-				if (serverSocket != null && !serverSocket.isClosed())
-					serverSocket.close();
-				System.in.close();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			if (executor != null)
-				executor.shutdownNow();
-			if (shell != null)
-				shell.close();
+		running = false;
+		if (executor != null)
+			executor.shutdown();
+		if (udpHandler != null)
+			udpHandler.close();
+		for (FileServerSocketThread t : fileServerTcpHandlers) {
+			// t is not null
+			t.close();
 		}
+		try {
+			if (serverSocket != null && !serverSocket.isClosed())
+				serverSocket.close();
+			System.in.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		if (executor != null)
+			executor.shutdownNow();
+		if (shell != null)
+			shell.close();
+	}
+
+	/**
+	 * Returns the file infos on this fileservers
+	 * @return the file infos on this fileservers
+	 */
+	public synchronized Set<FileInfo> getFiles() {
+		return new HashSet<FileInfo>(files);
 	}
 }

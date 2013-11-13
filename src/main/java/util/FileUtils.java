@@ -106,4 +106,16 @@ public class FileUtils {
 
 		}
 	}
+
+	
+	/**
+	 * Returns if the file exists 
+	 * @param path the Path of the file
+	 * @param filename the filename
+	 * @return <code>true</code> if the file exists
+	 */
+	public static boolean check(String path, String filename) {
+		File file = new File(path, filename);
+		return file.isFile();
+	}
 }

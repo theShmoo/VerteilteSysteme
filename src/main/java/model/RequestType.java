@@ -46,5 +46,5 @@ public enum RequestType {
 	 */
 	Upload, 
 
-	Info, Version
+	Info, Version, DetailedList
 }

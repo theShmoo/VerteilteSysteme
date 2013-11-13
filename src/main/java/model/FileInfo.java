@@ -1,12 +1,15 @@
 package model;
 
+import java.io.Serializable;
+
 /**
- * This Class represents a file with its name, its
+ * This Class represents a file with its name, its version and its size
  * 
  * @author David
  */
-public class FileInfo {
+public class FileInfo implements Serializable {
 
+	private static final long serialVersionUID = 8988635899065146082L;
 	private int version;
 	private String filename;
 	private long filesize;

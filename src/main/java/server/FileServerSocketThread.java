@@ -1,5 +1,6 @@
 package server;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Arrays;
@@ -10,6 +11,7 @@ import message.request.DownloadFileRequest;
 import message.request.InfoRequest;
 import message.request.UploadRequest;
 import message.request.VersionRequest;
+import message.response.DetailedListResponse;
 import message.response.DownloadFileResponse;
 import message.response.InfoResponse;
 import message.response.ListResponse;
@@ -19,6 +21,7 @@ import model.DownloadTicket;
 import model.FileInfo;
 import model.RequestTO;
 import proxy.Proxy;
+import util.ChecksumUtils;
 import util.FileUtils;
 import util.SocketThread;
 import client.Client;
@@ -80,6 +83,9 @@ public class FileServerSocketThread extends SocketThread implements IFileServer 
 					case Info:
 						response = info((InfoRequest) request.getRequest());
 						break;
+					case DetailedList:
+						response = detailedList();
+						break;
 					default:
 						response = new MessageResponse("ERROR!");
 						break;
@@ -100,14 +106,29 @@ public class FileServerSocketThread extends SocketThread implements IFileServer 
 				.getFileNames())));
 	}
 
+	/**
+	 * Get a Set of fileinfos available on this Fileserver
+	 * 
+	 * @return a Set of fileinfos
+	 * @throws IOException
+	 */
+	public Response detailedList() throws IOException {
+		return new DetailedListResponse(server.getFiles());
+	}
+
 	@Override
 	public Response download(DownloadFileRequest request) throws IOException {
 		DownloadTicket ticket = request.getTicket();
-		//TODO checksum
-		byte[] content = FileUtils.read(server.getPath(), ticket.getFilename());
-		DownloadFileResponse response = new DownloadFileResponse(ticket,
-				content);
-		return response;
+		if (ChecksumUtils.verifyChecksum(ticket.getUsername(),
+				new File(server.getPath(), ticket.getFilename()), server
+						.getFileInfo(ticket.getFilename()).getVersion(), ticket
+						.getChecksum())) {
+			byte[] content = FileUtils.read(server.getPath(),
+					ticket.getFilename());
+			return new DownloadFileResponse(ticket, content);
+		} else {
+			return new MessageResponse("The integrity could not be verified!");
+		}
 	}
 
 	@Override
@@ -122,12 +143,10 @@ public class FileServerSocketThread extends SocketThread implements IFileServer 
 
 	@Override
 	public Response version(VersionRequest request) throws IOException {
-		int version = 0;
-
 		FileInfo f = server.getFileInfo(request.getFilename());
 		if (f == null)
 			return new VersionResponse(request.getFilename(), 0);
-		return new VersionResponse(request.getFilename(), version);
+		return new VersionResponse(request.getFilename(), f.getVersion());
 	}
 
 	@Override

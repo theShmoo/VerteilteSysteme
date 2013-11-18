@@ -1,18 +1,24 @@
 *	startProxy proxy
 *	startFileServer fs1
 *	startFileServer fs2
-
+% online Fileservers: fs1 fs2
 
 proxy:	!fileservers
 fs1:	!exit
+% online Fileservers: fs2
+
 proxy:	!fileservers
 fs2:	!exit
+% online Fileservers: none
 proxy:	!fileservers
 
 *	startFileServer fs1
+% online Fileservers: fs1
 
 proxy:	!fileservers
-
+fs1:	!exit
+% online Fileservers: none
+proxy:	!fileservers
 proxy:	!exit
 
 

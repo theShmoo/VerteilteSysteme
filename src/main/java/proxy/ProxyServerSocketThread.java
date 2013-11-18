@@ -4,9 +4,6 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.Set;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import message.Response;
 import message.request.BuyRequest;
 import message.request.DownloadTicketRequest;
@@ -26,6 +23,7 @@ import model.RequestTO;
 import model.UserLoginInfo;
 import util.ChecksumUtils;
 import util.SocketThread;
+import util.UnexpectedCloseException;
 import client.Client;
 
 /**
@@ -37,8 +35,6 @@ public class ProxyServerSocketThread extends SocketThread implements IProxy {
 
 	private Proxy proxy;
 	private UserLoginInfo user;
-	private static final Logger LOG = LoggerFactory
-			.getLogger(ProxyServerSocketThread.class);
 
 	/**
 	 * Initialize a new ProxyServerSocketThread that handles Requests from
@@ -58,7 +54,7 @@ public class ProxyServerSocketThread extends SocketThread implements IProxy {
 	public void run() {
 
 		try {
-			LOG.info("start listening!");
+			// start listening
 			while (running) {
 				Object input = receive();
 
@@ -67,53 +63,46 @@ public class ProxyServerSocketThread extends SocketThread implements IProxy {
 
 				if (!(input instanceof RequestTO)) {
 					// major error
-					LOG.error("The input is not a RequestTO!");
 				} else {
 					request = (RequestTO) input;
 
 					switch (request.getType()) {
 					case Login:
-						LOG.info("Received login Request");
 						LoginRequest loginRequest = (LoginRequest) request
 								.getRequest();
 						response = login(loginRequest);
 						break;
 					case Logout:
-						LOG.info("Received logout Request");
 						response = logout();
 						break;
 					case Credits:
-						LOG.info("Received Credits Request");
 						response = credits();
 						break;
 					case Buy:
-						LOG.info("Received Buy Request");
 						response = buy((BuyRequest) request.getRequest());
 						break;
 					case Ticket:
-						LOG.info("Received Ticket Request");
 						response = download((DownloadTicketRequest) request
 								.getRequest());
 						break;
 					case List:
-						LOG.info("Received List Request");
 						response = list();
 						break;
 					case Upload:
-						LOG.info("Received Upload Request");
 						response = upload((UploadRequest) request.getRequest());
 						break;
 					default:
-						LOG.error("Received a Request that is not suitable for a Proxy");
+						// Received a Request that is not suitable for a Proxy
 						response = new MessageResponse("ERROR!");
 						break;
 					}
 				}
-				LOG.info("Send Response");
 				send(response);
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
+		} catch (UnexpectedCloseException e) {
+			System.out.println("The connection to the user is down!");
 		} finally {
 			close();
 		}
@@ -159,6 +148,10 @@ public class ProxyServerSocketThread extends SocketThread implements IProxy {
 	public Response list() throws IOException {
 		if (userCheck()) {
 			Set<String> set = proxy.getFiles();
+			if (set == null){
+				return new MessageResponse(
+						"Sorry there is currently no fileserver available! Please try again later...");
+			}
 			return new ListResponse(set);
 		}
 		return new MessageResponse("No user is authenticated!");
@@ -235,5 +228,16 @@ public class ProxyServerSocketThread extends SocketThread implements IProxy {
 		}
 		return new MessageResponse(
 				"Logout failed! The user was already offline.");
+	}
+	
+	/* (non-Javadoc)
+	 * @see util.SocketThread#close()
+	 */
+	@Override
+	public void close() {
+		super.close();
+		if(user != null){
+			user.setOffline();
+		}
 	}
 }

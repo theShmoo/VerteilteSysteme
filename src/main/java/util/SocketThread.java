@@ -37,10 +37,10 @@ public abstract class SocketThread implements Runnable {
 	/**
 	 * Waits for a stream
 	 * 
-	 * @throws IOException
+	 * @throws UnexpectedCloseException 
 	 * @throws ClassNotFoundException
 	 */
-	protected Object receive() {
+	protected Object receive() throws UnexpectedCloseException {
 		Object input = null;
 		try {
 			input = inStream.readObject();
@@ -48,7 +48,7 @@ public abstract class SocketThread implements Runnable {
 			e.printStackTrace();
 		} catch (IOException e) {
 			if (running)
-				e.printStackTrace();
+				throw new UnexpectedCloseException("Connection reset");
 		}
 		handleInput(input);
 		return input;

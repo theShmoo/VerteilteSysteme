@@ -108,7 +108,7 @@ public class UserLoginInfo {
 	 *            the upload request credits
 	 */
 	public synchronized void addCredits(UploadRequest request) {
-		this.credits += request.getContent().length*2;
+		this.credits += request.getContent().length * 2;
 	}
 
 	/**
@@ -123,7 +123,8 @@ public class UserLoginInfo {
 
 	/**
 	 * @param size
-	 * @return TODO
+	 *            the number of credits to check<
+	 * @return {@code true} if the client has enough credits
 	 */
 	public synchronized boolean hasEnoughCredits(long size) {
 		return size < credits;

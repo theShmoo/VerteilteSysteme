@@ -13,6 +13,7 @@ import message.request.LogoutRequest;
 import message.request.UploadRequest;
 import message.response.DownloadTicketResponse;
 import message.response.LoginResponse;
+import message.response.LoginResponse.Type;
 import message.response.MessageResponse;
 import model.DownloadTicket;
 import model.FileInfo;
@@ -54,9 +55,14 @@ public class ClientCli implements IClientCli {
 	public LoginResponse login(String username, String password) {
 		LoginRequest data = new LoginRequest(username, password);
 		RequestTO request = new RequestTO(data, RequestType.Login);
-		LoginResponse respond = (LoginResponse) client.send(request);
-		login = true;
-		return respond;
+		Response response = client.send(request);
+		if(response instanceof LoginResponse){
+			LoginResponse r = (LoginResponse) response;
+			login = true;
+			return r;
+		}
+		System.out.println(response.toString());
+		return new LoginResponse(Type.WRONG_CREDENTIALS);
 	}
 
 	/*

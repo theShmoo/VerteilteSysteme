@@ -82,7 +82,7 @@ public class FileServerStatusInfo {
 	}
 
 	/**
-	 * Sets the Fileserver status to onle
+	 * Sets the Fileserver status to offline
 	 */
 	public void setOffline() {
 		this.online = false;

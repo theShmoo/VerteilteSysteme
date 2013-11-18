@@ -31,7 +31,8 @@ public class ProxyDatagramSocketThread implements Runnable {
 		try {
 			this.socket = new DatagramSocket(udpPort);
 		} catch (SocketException e) {
-			e.printStackTrace();
+			System.out.println(e.getMessage());
+			close();
 		}
 	}
 
@@ -59,7 +60,7 @@ public class ProxyDatagramSocketThread implements Runnable {
 	private void sendIsAlive(DatagramPacket packet) {
 		String aliveMessage = new String(packet.getData(), 0,
 				packet.getLength());
-		InetAddress adress = packet.getAddress();
+		InetAddress address = packet.getAddress();
 
 		String[] split = aliveMessage.split(" ");
 
@@ -70,7 +71,7 @@ public class ProxyDatagramSocketThread implements Runnable {
 
 				if ((portToInt > 0) && (portToInt < 12500)) {
 					int fileServerTCPPort = portToInt;
-					proxy.isAlive(fileServerTCPPort, adress);
+					proxy.isAlive(fileServerTCPPort, address);
 				}
 
 			} catch (NumberFormatException e) {
@@ -84,7 +85,7 @@ public class ProxyDatagramSocketThread implements Runnable {
 	 */
 	public void close() {
 		running = false;
-		if(!socket.isClosed()){
+		if(socket != null && !socket.isClosed()){
 			socket.close();
 		}
 	}

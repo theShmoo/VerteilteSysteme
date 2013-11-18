@@ -24,6 +24,7 @@ import proxy.Proxy;
 import util.ChecksumUtils;
 import util.FileUtils;
 import util.SocketThread;
+import util.UnexpectedCloseException;
 import client.Client;
 
 /**
@@ -90,11 +91,14 @@ public class FileServerSocketThread extends SocketThread implements IFileServer 
 						response = new MessageResponse("ERROR!");
 						break;
 					}
+					send(response);
 				}
-				send(response);
+
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
+		} catch (UnexpectedCloseException e) {
+			System.out.println("The connection to the partner is down!");
 		} finally {
 			close();
 		}

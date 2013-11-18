@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -37,10 +36,6 @@ import model.RequestTO;
 import model.RequestType;
 import model.UserInfo;
 import model.UserLoginInfo;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import server.FileServer;
 import util.ChecksumUtils;
 import util.Config;
@@ -75,9 +70,6 @@ public class Proxy implements Runnable {
 
 	// Filesyncing
 	private Map<String, Integer> fileVersionMap;
-
-	// Logging
-	private static final Logger LOG = LoggerFactory.getLogger(Proxy.class);
 
 	/**
 	 * Initialize a new Proxy
@@ -194,7 +186,7 @@ public class Proxy implements Runnable {
 			}
 		} catch (IOException e) {
 			if (running)
-				e.printStackTrace();
+				System.out.println(e.getMessage());
 			// else it is ok
 		} finally {
 			if (running)
@@ -260,15 +252,13 @@ public class Proxy implements Runnable {
 			}
 		}
 		if (newServer) {
-			fileservers.add(new FileServerStatusInfo(address, fileServerTCPPort,
-					0, true));
-			try {
-				LOG.info("a new fileserver is online {}", fileServerTCPPort);
+			fileservers.add(new FileServerStatusInfo(address,
+					fileServerTCPPort, 0, true));
+			try { 
 				syncFileservers();
 			} catch (IOException e) {
-				e.printStackTrace();
+				System.out.println(e.getMessage());
 			}
-
 		}
 	}
 
@@ -325,19 +315,16 @@ public class Proxy implements Runnable {
 	public void checkOnline() {
 		for (FileServerStatusInfo f : fileservers) {
 			if (System.currentTimeMillis() - f.getActive() > fsCheckPeriod) {
-				if(f.isOnline())
+				if (f.isOnline())
 					f.setOffline();
-			} else if(!f.isOnline()){
+			} else if (!f.isOnline()) {
 				f.setOnline();
 				if (uploadChange) {
 					try {
-						LOG.info(
-								"a fileserver went back online and missed an upload! {} on Port: {}",
-								f.getAddress(),f.getPort());
 						uploadChange = false;
 						syncFileservers();
 					} catch (IOException e) {
-						e.printStackTrace();
+						System.out.println(e.getMessage());
 					}
 				}
 			}
@@ -367,7 +354,11 @@ public class Proxy implements Runnable {
 	 * @throws IOException
 	 */
 	public Set<String> getFiles() throws IOException {
-		Response response = getFileserverWithStatus().getSender().send(
+		FileServerStatusInfo f = getFileserverWithStatus();
+		if(f == null){
+			return null;
+		}
+		Response response = f.getSender().send(
 				new RequestTO(new ListRequest(), RequestType.List));
 		if (response instanceof ListResponse) {
 			return ((ListResponse) response).getFileNames();
@@ -388,8 +379,7 @@ public class Proxy implements Runnable {
 		if (response instanceof DetailedListResponse) {
 			return ((DetailedListResponse) response).getFileInfo();
 		}
-
-		return new HashSet<FileInfo>(); // TODO error handling
+		throw new IOException(response.toString());
 	}
 
 	/**
@@ -399,7 +389,7 @@ public class Proxy implements Runnable {
 	 *            the UploadRequest from a clients
 	 * @throws IOException
 	 */
-	public void distributeFile(UploadRequest request) throws IOException {
+	public synchronized void distributeFile(UploadRequest request) throws IOException {
 
 		uploadChange();
 		int version = 0;
@@ -428,15 +418,14 @@ public class Proxy implements Runnable {
 	 * @throws IOException
 	 */
 	public synchronized void syncFileservers() throws IOException {
-		LOG.info("starting synchronization");
+		// starting synchronization
 
 		// the online fileservers
 		Set<FileServerStatusInfo> fileservers = getOnlineFileservers();
 		// this map contains the files that all fileservers should have
 		Map<FileInfo, FileServerStatusInfo> updateFiles = new HashMap<FileInfo, FileServerStatusInfo>();
 
-		LOG.info("getting Fileinfos from all online fileservers: {}",
-				Arrays.toString(fileservers.toArray()));
+		// getting Fileinfos from all online fileservers
 		for (FileServerStatusInfo f : fileservers) {
 
 			Set<FileInfo> files = getFiles(f.getSender());
@@ -446,40 +435,37 @@ public class Proxy implements Runnable {
 				int version = file.getVersion();
 				if (fileVersionMap.containsKey(filename)) {
 					if (fileVersionMap.get(filename) <= version) {
-						//fileserver f has a file with newer or same version
+						// fileserver f has a file with newer or same version
 						fileVersionMap.put(filename, version);
 						updateFiles.put(file, f);
 					}
 				} else {
-					//fileserver f has a new file
+					// fileserver f has a new file
 					fileVersionMap.put(filename, version);
 					updateFiles.put(file, f);
 				}
 			}
 		}
-		StringBuilder s = new StringBuilder("\t");
-		for (FileInfo f : updateFiles.keySet()) {
-			s.append(f.toString());
-			s.append("\n\t");
-		}
-		LOG.info("All Fileservers should have these files:\n{}", s.toString());
 
-		if(fileservers.size() != 1){
-			LOG.info("Download the latest Versions of the files");
+		// All Fileservers should have these files
+
+		if (fileservers.size() != 1) {
+			// Download the latest Versions of the files
 			for (FileInfo file : updateFiles.keySet()) {
 				String filename = file.getFilename();
 				int version = file.getVersion();
-				try{
+				try {
 					byte[] content = getFileContent(filename, version,
-						file.getFilesize(), updateFiles.get(file).getSender());
-						LOG.info("Upload {}", filename);
-						UploadRequest request = new UploadRequest(filename, version,
-								content);
-						distributeFile(request);
-				} catch(IllegalArgumentException e){
-					//Conflict...
+							file.getFilesize(), updateFiles.get(file)
+									.getSender());
+					// Upload
+					UploadRequest request = new UploadRequest(filename,
+							version, content);
+					distributeFile(request);
+				} catch (IllegalArgumentException e) {
+					// Conflict...
 				}
-				
+
 			}
 		}
 	}
@@ -492,8 +478,8 @@ public class Proxy implements Runnable {
 	 * @throws IOException
 	 */
 	private byte[] getFileContent(String file, int version, long size,
-			SingleServerSocketCommunication sender) throws IOException,IllegalArgumentException {
-		LOG.info("get file content of {}", file);
+			SingleServerSocketCommunication sender) throws IOException,
+			IllegalArgumentException {
 		Response response = sender.send(new RequestTO(new DownloadFileRequest(
 				new DownloadTicket("proxy", file, ChecksumUtils
 						.generateChecksum("proxy", file, version, size),
@@ -503,7 +489,8 @@ public class Proxy implements Runnable {
 			DownloadFileResponse download = (DownloadFileResponse) response;
 			return download.getContent();
 		} else {
-			throw new IllegalArgumentException("Conflict! "+response.toString());
+			throw new IllegalArgumentException("Conflict! "
+					+ response.toString());
 		}
 	}
 
@@ -560,8 +547,7 @@ public class Proxy implements Runnable {
 	 *            the filename
 	 * @return the size of the file or null if the file does not exist
 	 */
-	public synchronized Response getFileInfo(FileServerInfo server,
-			String filename) {
+	public synchronized Response getFileInfo(FileServerInfo server, String filename) {
 		SingleServerSocketCommunication sender = new SingleServerSocketCommunication(
 				server.getPort(), server.getAddress().getHostAddress());
 		return getFileInfo(sender, filename);
@@ -577,8 +563,8 @@ public class Proxy implements Runnable {
 	 *            the filename
 	 * @return the size of the file or null if the file does not exist
 	 */
-	public synchronized Response getFileInfo(
-			SingleServerSocketCommunication sender, String filename) {
+	private Response getFileInfo(SingleServerSocketCommunication sender,
+			String filename) {
 		return sender.send(new RequestTO(new InfoRequest(filename),
 				RequestType.Info));
 	}
@@ -622,7 +608,7 @@ public class Proxy implements Runnable {
 	public void addServerUsage(FileServerInfo server, long usage) {
 		FileServerStatusInfo f = getFileServer(server);
 		if (f != null) {
-			getFileServer(server).addUsage(usage);
+			f.addUsage(usage);
 		}
 	}
 
@@ -639,17 +625,18 @@ public class Proxy implements Runnable {
 	}
 
 	/**
+	 * A change that not all fileservers now appeard
 	 * 
 	 * @param uploadChange
 	 *            the uploadChange to set
 	 */
-	private void uploadChange() {
+	private synchronized void uploadChange() {
 		for (FileServerStatusInfo f : fileservers) {
 			if (!f.isOnline()) {
-				LOG.info("A change that not all fileservers now!");
 				this.uploadChange = true;
 				break;
 			}
 		}
 	}
+
 }

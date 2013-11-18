@@ -140,10 +140,9 @@ public class FileServer implements Runnable {
 	 */
 	public static void main(String[] args) {
 		String serverName = "";
-		if(args.length != 1){
+		if (args.length != 1) {
 			serverName = "fs1";
-		}
-		else{
+		} else {
 			serverName = args[0];
 		}
 		new FileServer(serverName).run();
@@ -214,9 +213,10 @@ public class FileServer implements Runnable {
 	}
 
 	/**
-	 * TODO desription
+	 * Persist a file received from a Upload Request
 	 * 
 	 * @param request
+	 *            the {@link UploadRequest}
 	 */
 	public void persist(UploadRequest request) {
 		FileUtils.write(request.getContent(), getPath(), request.getFilename());
@@ -227,8 +227,6 @@ public class FileServer implements Runnable {
 	 * Closes all open Streams and Sockets
 	 */
 	public synchronized void close() {
-		// XXX note that the if the fileserver is not closed but started again
-		// then the port blocks...
 		running = false;
 		if (executor != null)
 			executor.shutdown();
@@ -253,6 +251,7 @@ public class FileServer implements Runnable {
 
 	/**
 	 * Returns the file infos on this fileservers
+	 * 
 	 * @return the file infos on this fileservers
 	 */
 	public synchronized Set<FileInfo> getFiles() {

@@ -72,11 +72,14 @@ public class SingleServerSocketCommunication {
 		try {
 			outputStream.writeObject(request);
 			input = inStream.readObject();
-			if (input == null) {
-				close();
+			if (input == null || !(input instanceof Response)) {
+				return new MessageResponse("The response from Host \"" + host
+						+ "\" with the port " + port
+						+ " could not get interpreted correctly.");
 			} else {
 				response = (Response) input;
 			}
+			return response;
 		} catch (IOException e) {
 			return new MessageResponse("Could not write to Host \"" + host
 					+ "\" on port " + port);
@@ -87,7 +90,6 @@ public class SingleServerSocketCommunication {
 			if (!running)
 				close();
 		}
-		return response;
 	}
 
 	/**

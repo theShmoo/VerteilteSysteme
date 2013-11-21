@@ -69,10 +69,9 @@ public class ProxyDatagramSocketThread implements Runnable {
 			try {
 				int portToInt = Integer.parseInt(port);
 
-				if ((portToInt > 0) && (portToInt < 12500)) {
+				//TODO
 					int fileServerTCPPort = portToInt;
 					proxy.isAlive(fileServerTCPPort, address);
-				}
 
 			} catch (NumberFormatException e) {
 				//Wrong package received Clam down and carry on

@@ -124,6 +124,8 @@ public class FileInfo implements Serializable {
 	/*
 	 * (non-Javadoc)
 	 * 
+	 * version will not compared
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override

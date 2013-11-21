@@ -28,7 +28,6 @@ import util.UnexpectedCloseException;
 import client.Client;
 
 /**
- * 
  * This Thread handles incoming requests from {@link Client} and {@link Proxy}
  * 
  * @author David

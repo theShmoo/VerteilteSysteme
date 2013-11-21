@@ -82,8 +82,7 @@ public class ProxyServerSocketThread extends SocketThread implements IProxy {
 						response = buy((BuyRequest) request.getRequest());
 						break;
 					case Ticket:
-						response = download((DownloadTicketRequest) request
-								.getRequest());
+						response = download((DownloadTicketRequest) request.getRequest());
 						break;
 					case List:
 						response = list();

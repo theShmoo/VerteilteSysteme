@@ -22,22 +22,26 @@ public class FileServerDatagramThread implements Runnable {
 	private TimerTask action;
 
 	/**
+	 * Initialize a new FileServerDatagramThread that sends UDP packages at a
+	 * given time interval
+	 * 
 	 * @param packet
+	 *            the udp package
 	 * @param alive
+	 *            the time interval
 	 */
 	public FileServerDatagramThread(final DatagramPacket packet, long alive) {
 		this.packet = packet;
 		this.alive = alive;
 		this.running = true;
 
-		
 		try {
 			socket = new DatagramSocket();
 		} catch (SocketException e) {
 			e.printStackTrace();
 			close();
 		}
-		
+
 		action = new TimerTask() {
 			public void run() {
 				try {
@@ -48,7 +52,7 @@ public class FileServerDatagramThread implements Runnable {
 				}
 			}
 		};
-		
+
 		this.udpSender = new Timer();
 	}
 
@@ -62,7 +66,7 @@ public class FileServerDatagramThread implements Runnable {
 	 */
 	public void close() {
 		running = false;
-		if(udpSender != null)
+		if (udpSender != null)
 			udpSender.cancel();
 		if (socket != null)
 			socket.close();

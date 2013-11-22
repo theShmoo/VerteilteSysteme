@@ -5,9 +5,16 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 
+import proxy.ProxyServerSocketThread;
+import server.FileServerSocketThread;
+
 /**
+ * This abstract class provides functionality on a specific port for incoming
+ * messages
  * 
  * @author David
+ * @see ProxyServerSocketThread
+ * @see FileServerSocketThread
  */
 public abstract class SocketThread implements Runnable {
 
@@ -37,7 +44,7 @@ public abstract class SocketThread implements Runnable {
 	/**
 	 * Waits for a stream
 	 * 
-	 * @throws UnexpectedCloseException 
+	 * @throws UnexpectedCloseException
 	 * @throws ClassNotFoundException
 	 */
 	protected Object receive() throws UnexpectedCloseException {
@@ -54,15 +61,29 @@ public abstract class SocketThread implements Runnable {
 		return input;
 	}
 
+	/**
+	 * Send an object via the stream
+	 * 
+	 * @param response
+	 *            the object to send
+	 */
 	protected void send(Object response) {
 		try {
 			outputStream.writeObject(response);
 		} catch (IOException e) {
-			if(running)
+			if (running)
 				e.printStackTrace();
 		}
 	}
 
+	/**
+	 * If the SocketThread receives a null Object it makes an controlled close
+	 * otherwise this method returns the received object
+	 * 
+	 * @param input
+	 *            the received object
+	 * @return the received input
+	 */
 	private Object handleInput(Object input) {
 		if (input == null) {
 			// controlled close if input is null Object

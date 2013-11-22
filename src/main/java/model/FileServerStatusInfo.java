@@ -6,9 +6,11 @@ package model;
 import java.io.IOException;
 import java.net.InetAddress;
 
+import server.FileServer;
 import util.SingleServerSocketCommunication;
 
 /**
+ * This class represents a registered {@link FileServer}
  * 
  * @author David
  */
@@ -22,10 +24,16 @@ public class FileServerStatusInfo {
 	private SingleServerSocketCommunication sender;
 
 	/**
+	 * Initializes a new FileSeverStatusInfo
+	 * 
 	 * @param address
+	 *            the address of the server
 	 * @param port
+	 *            the TCP port of the server
 	 * @param usage
+	 *            the usage of the server
 	 * @param online
+	 *            the online status of the server
 	 */
 	public FileServerStatusInfo(InetAddress address, int port, long usage,
 			boolean online) {
@@ -179,7 +187,9 @@ public class FileServerStatusInfo {
 		this.usage += usage;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#toString()
 	 */
 	@Override
@@ -188,7 +198,5 @@ public class FileServerStatusInfo {
 				+ ", usage=" + usage + ", active=" + active + ", online="
 				+ online + "]";
 	}
-	
-	
 
 }

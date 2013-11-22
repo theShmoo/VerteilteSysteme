@@ -56,7 +56,7 @@ public class ClientCli implements IClientCli {
 		LoginRequest data = new LoginRequest(username, password);
 		RequestTO request = new RequestTO(data, RequestType.Login);
 		Response response = client.send(request);
-		if(response instanceof LoginResponse){
+		if (response instanceof LoginResponse) {
 			LoginResponse r = (LoginResponse) response;
 			login = true;
 			return r;
@@ -191,15 +191,6 @@ public class ClientCli implements IClientCli {
 		client.exit();
 		exitMessage.append("Shutting down client now");
 		return new MessageResponse(exitMessage.toString());
-	}
-
-	/**
-	 * Returns <code>true</code> if the user is logged in
-	 * 
-	 * @return <code>true</code> if the user is logged in
-	 */
-	public boolean getLoggedIn() {
-		return login;
 	}
 
 }

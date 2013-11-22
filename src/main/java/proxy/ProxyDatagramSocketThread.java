@@ -50,13 +50,19 @@ public class ProxyDatagramSocketThread implements Runnable {
 				sendIsAlive(packet);
 			}
 		} catch (IOException e) {
-			if(!socket.isClosed())
+			if (!socket.isClosed())
 				e.printStackTrace();
 		} finally {
 			close();
 		}
 	}
 
+	/**
+	 * transformes the received UDP packet to an method call on the proxy to set
+	 * the fileserver online
+	 * 
+	 * @param packet
+	 */
 	private void sendIsAlive(DatagramPacket packet) {
 		String aliveMessage = new String(packet.getData(), 0,
 				packet.getLength());
@@ -68,13 +74,11 @@ public class ProxyDatagramSocketThread implements Runnable {
 			String port = split[1];
 			try {
 				int portToInt = Integer.parseInt(port);
-
-				//TODO
-					int fileServerTCPPort = portToInt;
-					proxy.isAlive(fileServerTCPPort, address);
+				int fileServerTCPPort = portToInt;
+				proxy.isAlive(fileServerTCPPort, address);
 
 			} catch (NumberFormatException e) {
-				//Wrong package received Clam down and carry on
+				// Wrong package received Clam down and carry on
 			}
 		}
 	}
@@ -84,7 +88,7 @@ public class ProxyDatagramSocketThread implements Runnable {
 	 */
 	public void close() {
 		running = false;
-		if(socket != null && !socket.isClosed()){
+		if (socket != null && !socket.isClosed()) {
 			socket.close();
 		}
 	}

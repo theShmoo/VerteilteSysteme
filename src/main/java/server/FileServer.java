@@ -95,6 +95,8 @@ public class FileServer implements Runnable {
 
 	/**
 	 * Updates the files
+	 * 
+	 * XXX Astrid maybe interesting for you
 	 */
 	private synchronized void updateFiles() {
 
@@ -224,9 +226,18 @@ public class FileServer implements Runnable {
 	}
 
 	/**
+	 * Returns the file infos on this fileservers
+	 * 
+	 * @return the file infos on this fileservers
+	 */
+	public synchronized Set<FileInfo> getFiles() {
+		return new HashSet<FileInfo>(files);
+	}
+
+	/**
 	 * Closes all open Streams and Sockets
 	 */
-	public synchronized void close() {
+	public void close() {
 		running = false;
 		if (executor != null)
 			executor.shutdown();
@@ -247,14 +258,5 @@ public class FileServer implements Runnable {
 			executor.shutdownNow();
 		if (shell != null)
 			shell.close();
-	}
-
-	/**
-	 * Returns the file infos on this fileservers
-	 * 
-	 * @return the file infos on this fileservers
-	 */
-	public synchronized Set<FileInfo> getFiles() {
-		return new HashSet<FileInfo>(files);
 	}
 }

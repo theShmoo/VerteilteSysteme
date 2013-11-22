@@ -42,6 +42,7 @@ import util.Config;
 import util.SingleServerSocketCommunication;
 import util.UserLoader;
 import cli.Shell;
+import client.Client;
 
 /**
  * 
@@ -84,11 +85,20 @@ public class Proxy implements Runnable {
 	 * @param shell
 	 *            the {@link Shell} of the Proxy
 	 * @param config
+	 *            the config containing the infos from the proxy
 	 */
 	public Proxy(Shell shell, Config config) {
 		init(shell, config);
 	}
 
+	/**
+	 * initializes all variables
+	 * 
+	 * @param shell
+	 *            the shell
+	 * @param config
+	 *            the config
+	 */
 	private void init(Shell shell, Config config) {
 		this.executor = Executors.newCachedThreadPool();
 
@@ -107,6 +117,12 @@ public class Proxy implements Runnable {
 		this.fileVersionMap = new ConcurrentHashMap<String, Integer>();
 	}
 
+	/**
+	 * Get the required data from the {@link Config} class
+	 * 
+	 * @param config
+	 *            the config containing infos from the proxy
+	 */
 	private void getProxyData(Config config) {
 		try {
 			this.tcpPort = config.getInt("tcp.port");
@@ -121,11 +137,17 @@ public class Proxy implements Runnable {
 			}
 			close();
 		}
+		// synchronized Set
 		this.fileservers = Collections
 				.synchronizedSet(new HashSet<FileServerStatusInfo>());
 		this.users = getUsers();
 	}
 
+	/**
+	 * Returns all registered users from the users.properties file
+	 * 
+	 * @return all registered users from the users.properties file
+	 */
 	private Set<UserLoginInfo> getUsers() {
 
 		Set<UserLoginInfo> users = new LinkedHashSet<UserLoginInfo>();
@@ -191,14 +213,16 @@ public class Proxy implements Runnable {
 		} finally {
 			if (running)
 				close();
+			// else it is already closed
 		}
 
 	}
 
 	/**
-	 * Returns all fileservers that are registered on the Proxy
+	 * Returns all {@link FileServer}s that are registered on the Proxy This is
+	 * synchronized because the fileservers may change while running through
 	 * 
-	 * @return all fileservers
+	 * @return all fileservers that are registered on the Proxy
 	 */
 	public synchronized Set<FileServerInfo> getFileServerInfos() {
 		checkOnline();
@@ -210,7 +234,8 @@ public class Proxy implements Runnable {
 	}
 
 	/**
-	 * Returns all users that are registered on the Proxy and their status
+	 * Returns all users that are registered on the Proxy and their status This
+	 * Method is called by {@link ProxyCli} to send them to the {@link Client}
 	 * 
 	 * @return all users
 	 */
@@ -234,8 +259,8 @@ public class Proxy implements Runnable {
 
 	/**
 	 * This method gets called when a new isAlive packet is send from a
-	 * fileserver the fileserver gets registered as active for the next time
-	 * interval
+	 * {@link FileServer} the fileserver gets registered as active for the next
+	 * time interval
 	 * 
 	 * @param fileServerTCPPort
 	 *            the TCP port of the fileserver
@@ -252,9 +277,12 @@ public class Proxy implements Runnable {
 			}
 		}
 		if (newServer) {
+			// if the port is not known the fileserver gets registered
 			fileservers.add(new FileServerStatusInfo(address,
 					fileServerTCPPort, 0, true));
-			try { 
+			// XXX sync by david maybe delete
+			// if a new fileserver gets online sync
+			try {
 				syncFileservers();
 			} catch (IOException e) {
 				System.out.println(e.getMessage());
@@ -286,7 +314,7 @@ public class Proxy implements Runnable {
 	 * @pre minimum one fileserver is connected
 	 * @return the fileserver with the lowest latency
 	 */
-	public synchronized FileServerInfo getFileserver() {
+	public FileServerInfo getFileserver() {
 		FileServerStatusInfo f = getFileserverWithStatus();
 		if (f != null) {
 			return f.getModel();
@@ -295,9 +323,12 @@ public class Proxy implements Runnable {
 	}
 
 	/**
-	 * @return
+	 * Iterate through all {@link FileServer}s and get the one with the lowest
+	 * usage. This is synchronized because the fileservers may change
+	 * 
+	 * @return the fileserver with the lowest usage
 	 */
-	private FileServerStatusInfo getFileserverWithStatus() {
+	private synchronized FileServerStatusInfo getFileserverWithStatus() {
 		long usage = Long.MAX_VALUE;
 		FileServerStatusInfo best = null;
 		for (FileServerStatusInfo f : getOnlineFileservers()) {
@@ -310,7 +341,10 @@ public class Proxy implements Runnable {
 	}
 
 	/**
-	 * Checks all fileservers if they are online
+	 * Checks all fileservers if they are online.
+	 * 
+	 * XXX Maybe this should get synchronized but i think this could cause this
+	 * method to block too long.
 	 */
 	public void checkOnline() {
 		for (FileServerStatusInfo f : fileservers) {
@@ -352,10 +386,12 @@ public class Proxy implements Runnable {
 	 * 
 	 * @return all files that are available for download as a list of Strings
 	 * @throws IOException
+	 *             if the connection does not work
 	 */
 	public Set<String> getFiles() throws IOException {
 		FileServerStatusInfo f = getFileserverWithStatus();
-		if(f == null){
+		if (f == null) {
+			// TODO maybe not null but Exception
 			return null;
 		}
 		Response response = f.getSender().send(
@@ -363,6 +399,7 @@ public class Proxy implements Runnable {
 		if (response instanceof ListResponse) {
 			return ((ListResponse) response).getFileNames();
 		}
+		// TODO maybe not null but Exception
 		return null;
 	}
 
@@ -371,9 +408,10 @@ public class Proxy implements Runnable {
 	 * 
 	 * @return all files that are available for download as a FileInfo List
 	 * @throws IOException
+	 *             if the connection does not work
 	 */
-	private Set<FileInfo> getFiles(SingleServerSocketCommunication sender)
-			throws IOException {
+	private Set<FileInfo> getDetailedFiles(
+			SingleServerSocketCommunication sender) throws IOException {
 		Response response = sender.send(new RequestTO(
 				new DetailedListRequest(), RequestType.DetailedList));
 		if (response instanceof DetailedListResponse) {
@@ -385,11 +423,14 @@ public class Proxy implements Runnable {
 	/**
 	 * Send the requested upload to all {@link FileServer}s
 	 * 
+	 * XXX Astrid you dont need this method any more.
+	 * 
 	 * @param request
 	 *            the UploadRequest from a clients
 	 * @throws IOException
 	 */
-	public synchronized void distributeFile(UploadRequest request) throws IOException {
+	public synchronized void distributeFile(UploadRequest request)
+			throws IOException {
 
 		uploadChange();
 		int version = 0;
@@ -415,6 +456,8 @@ public class Proxy implements Runnable {
 	 * Synchronize all online file servers so that every file server has all
 	 * newest files only call this function when a new Fileserver comes online
 	 * 
+	 * XXX Astrid you dont need this anymore
+	 * 
 	 * @throws IOException
 	 */
 	public synchronized void syncFileservers() throws IOException {
@@ -428,7 +471,7 @@ public class Proxy implements Runnable {
 		// getting Fileinfos from all online fileservers
 		for (FileServerStatusInfo f : fileservers) {
 
-			Set<FileInfo> files = getFiles(f.getSender());
+			Set<FileInfo> files = getDetailedFiles(f.getSender());
 
 			for (FileInfo file : files) {
 				String filename = file.getFilename();
@@ -471,6 +514,8 @@ public class Proxy implements Runnable {
 	}
 
 	/**
+	 * This method receives he content from a file from a specific Connection
+	 * 
 	 * @param file
 	 * @param version
 	 * @param fileServerStatusInfo
@@ -480,10 +525,16 @@ public class Proxy implements Runnable {
 	private byte[] getFileContent(String file, int version, long size,
 			SingleServerSocketCommunication sender) throws IOException,
 			IllegalArgumentException {
-		Response response = sender.send(new RequestTO(new DownloadFileRequest(
-				new DownloadTicket("proxy", file, ChecksumUtils
-						.generateChecksum("proxy", file, version, size),
-						serverSocket.getInetAddress(), tcpPort)),
+		Response response = sender.send(new RequestTO(
+				// Download Request
+				new DownloadFileRequest(
+				// needs a Ticket
+						new DownloadTicket("proxy", file,
+								ChecksumUtils
+								// with a checksum
+										.generateChecksum("proxy", file,
+												version, size), serverSocket
+										.getInetAddress(), tcpPort)),
 				RequestType.File));
 		if (response instanceof DownloadFileResponse) {
 			DownloadFileResponse download = (DownloadFileResponse) response;
@@ -507,12 +558,7 @@ public class Proxy implements Runnable {
 	 */
 	public int getVersion(FileServerInfo server, String filename)
 			throws IOException {
-		return getVersion(getFileServer(server), filename);
-	}
-
-	private int getVersion(FileServerStatusInfo f, String file)
-			throws IOException {
-		return getVersion(f.getSender(), file);
+		return getVersion(getFileServer(server).getSender(), filename);
 	}
 
 	/**
@@ -547,7 +593,8 @@ public class Proxy implements Runnable {
 	 *            the filename
 	 * @return the size of the file or null if the file does not exist
 	 */
-	public synchronized Response getFileInfo(FileServerInfo server, String filename) {
+	public synchronized Response getFileInfo(FileServerInfo server,
+			String filename) {
 		SingleServerSocketCommunication sender = new SingleServerSocketCommunication(
 				server.getPort(), server.getAddress().getHostAddress());
 		return getFileInfo(sender, filename);
@@ -570,9 +617,59 @@ public class Proxy implements Runnable {
 	}
 
 	/**
+	 * Adds the usage to the specified server
+	 * 
+	 * @param server
+	 *            the {@link FileServer} as info model
+	 * @param usage
+	 *            the usage or the size of file
+	 */
+	public void addServerUsage(FileServerInfo server, long usage) {
+		FileServerStatusInfo f = getFileServer(server);
+		if (f != null) {
+			f.addUsage(usage);
+		}
+	}
+
+	/**
+	 * This method returns the {@link FileServerStatusInfo} from the
+	 * {@link FileServerInfo}
+	 * 
+	 * @param server
+	 *            the model {@link FileServerInfo}
+	 * @returns the info {@link FileServerStatusInfo}
+	 */
+	private FileServerStatusInfo getFileServer(FileServerInfo server) {
+		for (FileServerStatusInfo f : fileservers) {
+			if (f.equalsFileServerInfo(server)) {
+				return f;
+			}
+		}
+		// no fileserver found
+		return null;
+	}
+
+	/**
+	 * A change that not all fileservers noticed because one was offline
+	 * 
+	 * XXX astrid maybe look at this... this has something todo with sync
+	 * 
+	 * @param uploadChange
+	 *            the uploadChange to set
+	 */
+	private synchronized void uploadChange() {
+		for (FileServerStatusInfo f : fileservers) {
+			if (!f.isOnline()) {
+				this.uploadChange = true;
+				break;
+			}
+		}
+	}
+
+	/**
 	 * Closes all Sockets and Streams
 	 */
-	public synchronized void close() {
+	public void close() {
 		running = false;
 		if (executor != null)
 			executor.shutdown();
@@ -595,48 +692,6 @@ public class Proxy implements Runnable {
 			executor.shutdownNow();
 		if (shell != null)
 			shell.close();
-	}
-
-	/**
-	 * Adds the usage to the specified server
-	 * 
-	 * @param server
-	 *            the {@link FileServer} as info model
-	 * @param usage
-	 *            the usage or the size of file
-	 */
-	public void addServerUsage(FileServerInfo server, long usage) {
-		FileServerStatusInfo f = getFileServer(server);
-		if (f != null) {
-			f.addUsage(usage);
-		}
-	}
-
-	/**
-	 * @param server
-	 */
-	private FileServerStatusInfo getFileServer(FileServerInfo server) {
-		for (FileServerStatusInfo f : fileservers) {
-			if (f.equalsFileServerInfo(server)) {
-				return f;
-			}
-		}
-		return null;
-	}
-
-	/**
-	 * A change that not all fileservers now appeard
-	 * 
-	 * @param uploadChange
-	 *            the uploadChange to set
-	 */
-	private synchronized void uploadChange() {
-		for (FileServerStatusInfo f : fileservers) {
-			if (!f.isOnline()) {
-				this.uploadChange = true;
-				break;
-			}
-		}
 	}
 
 }

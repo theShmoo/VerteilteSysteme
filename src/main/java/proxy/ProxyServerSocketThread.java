@@ -28,8 +28,6 @@ import client.Client;
 
 /**
  * A TCP Server Socket Thread that handles Requests from {@link Client}
- * 
- * @author David
  */
 public class ProxyServerSocketThread extends SocketThread implements IProxy {
 
@@ -89,6 +87,12 @@ public class ProxyServerSocketThread extends SocketThread implements IProxy {
 						break;
 					case Upload:
 						response = upload((UploadRequest) request.getRequest());
+						break;
+					case ReadQuorum:
+						response = getReadQuorums();
+						break;
+					case WriteQuorum:
+						response = getWriteQuorums();
 						break;
 					default:
 						// Received a Request that is not suitable for a Proxy
@@ -209,7 +213,7 @@ public class ProxyServerSocketThread extends SocketThread implements IProxy {
 	@Override
 	public MessageResponse upload(UploadRequest request) throws IOException {
 		if (userCheck()) {
-			proxy.distributeFile(request);
+			proxy.uploadFile(request);
 			user.addCredits(request);
 			return new MessageResponse(
 					"File successfully uploaded.\n\rYou now have "
@@ -227,6 +231,34 @@ public class ProxyServerSocketThread extends SocketThread implements IProxy {
 		}
 		return new MessageResponse(
 				"Logout failed! The user was already offline.");
+	}
+	
+	/**
+	 * Return the number of read quorums
+	 * 
+	 * @return number
+	 * @throws IOException
+	 */
+	public Response getReadQuorums() throws IOException {
+		if (userCheck()) {
+			int numbers = proxy.getReadQuorums();
+			return new MessageResponse("Read-Quorum is set to " + numbers + ".");
+		}
+		return new MessageResponse("No user is authenticated!");
+	}
+	
+	/**
+	 * Returns the number of write quorums
+	 * 
+	 * @return number
+	 * @throws IOException
+	 */
+	public Response getWriteQuorums() throws IOException {
+		if (userCheck()) {
+			int numbers = proxy.getWriteQuorums();
+			return new MessageResponse("Write-Quorum is set to " + numbers + ".");
+		}
+		return new MessageResponse("No user is authenticated!");
 	}
 	
 	/* (non-Javadoc)

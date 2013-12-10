@@ -96,7 +96,6 @@ public class FileServer implements Runnable {
 	/**
 	 * Updates the files
 	 * 
-	 * XXX Astrid maybe interesting for you
 	 */
 	private synchronized void updateFiles() {
 
@@ -111,6 +110,30 @@ public class FileServer implements Runnable {
 				if (updateable.getFilesize() != fi.getFilesize()) {
 					updateable.setFilesize(fi.getFilesize());
 					updateable.increaseVersionNumber();
+				}
+			}
+
+		}
+	}
+	
+	/**
+	 * updates the files
+	 * 
+	 * @param version the new version of the file
+	 */
+	private synchronized void updateFiles(float version) {
+
+		File[] folderfile = folder.listFiles(FileUtils.TEXTFILTER);
+
+		for (File f : folderfile) {
+			FileInfo fi = new FileInfo(f.getName(), f.length());
+			if (!files.contains(fi)) {
+				files.add(fi);
+			} else {
+				FileInfo updateable = files.get(files.indexOf(fi));
+				if (updateable.getFilesize() != fi.getFilesize()) {
+					updateable.setFilesize(fi.getFilesize());
+					updateable.setVersion((int)version);
 				}
 			}
 
@@ -222,7 +245,7 @@ public class FileServer implements Runnable {
 	 */
 	public void persist(UploadRequest request) {
 		FileUtils.write(request.getContent(), getPath(), request.getFilename());
-		updateFiles();
+		updateFiles(request.getVersion());
 	}
 
 	/**

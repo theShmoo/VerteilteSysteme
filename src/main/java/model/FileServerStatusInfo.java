@@ -11,8 +11,6 @@ import util.SingleServerSocketCommunication;
 
 /**
  * This class represents a registered {@link FileServer}
- * 
- * @author David
  */
 public class FileServerStatusInfo {
 
@@ -21,6 +19,8 @@ public class FileServerStatusInfo {
 	private long usage;
 	private long active;
 	private boolean online;
+//	private boolean isNr;
+//	private boolean isNw;
 	private SingleServerSocketCommunication sender;
 
 	/**
@@ -34,6 +34,10 @@ public class FileServerStatusInfo {
 	 *            the usage of the server
 	 * @param online
 	 *            the online status of the server
+	 * @param isNr
+	 * 			  the nr status of the server
+	 * @param isNW 
+	 * 			  the nw status of the server
 	 */
 	public FileServerStatusInfo(InetAddress address, int port, long usage,
 			boolean online) {
@@ -42,6 +46,8 @@ public class FileServerStatusInfo {
 		this.usage = usage;
 		this.active = System.currentTimeMillis();
 		this.online = online;
+//		this.isNr = isNr;
+//		this.isNw = isNw;
 	}
 
 	/**
@@ -123,6 +129,34 @@ public class FileServerStatusInfo {
 	public synchronized void setUsage(long usage) {
 		this.usage = usage;
 	}
+	
+//	/**
+//	 * @param isNr the isNr to set
+//	 */
+//	public void setNr(boolean isNr) {
+//		this.isNr = isNr;
+//	}
+//
+//	/**
+//	 * @return the isNr
+//	 */
+//	public boolean isNr() {
+//		return isNr;
+//	}
+//
+//	/**
+//	 * @param isNw the isNw to set
+//	 */
+//	public void setNw(boolean isNw) {
+//		this.isNw = isNw;
+//	}
+//	
+//	/**
+//	 * @return the isNw
+//	 */
+//	public boolean isNw() {
+//		return isNw;
+//	}
 
 	/**
 	 * Returns the FileServerInfo model
@@ -146,6 +180,7 @@ public class FileServerStatusInfo {
 		result = prime * result + (online ? 1231 : 1237);
 		result = prime * result + port;
 		result = prime * result + (int) (usage ^ (usage >>> 32));
+		//TODO add nr and nw
 		return result;
 	}
 

@@ -7,8 +7,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
@@ -44,10 +46,6 @@ import util.UserLoader;
 import cli.Shell;
 import client.Client;
 
-/**
- * 
- * @author David
- */
 public class Proxy implements Runnable {
 
 	private Shell shell;
@@ -69,8 +67,8 @@ public class Proxy implements Runnable {
 	private boolean running;
 	private boolean uploadChange;
 
-	// Filesyncing
-	private Map<String, Integer> fileVersionMap;
+	//Replication Parameters
+	private List<FileServerStatusInfo> serverList;
 
 	/**
 	 * Initialize a new Proxy
@@ -114,7 +112,7 @@ public class Proxy implements Runnable {
 		getProxyData(config);
 
 		this.proxyTcpHandlers = new ArrayList<ProxyServerSocketThread>();
-		this.fileVersionMap = new ConcurrentHashMap<String, Integer>();
+		//		this.fileVersionMap = new ConcurrentHashMap<String, Integer>();
 	}
 
 	/**
@@ -141,6 +139,7 @@ public class Proxy implements Runnable {
 		this.fileservers = Collections
 				.synchronizedSet(new HashSet<FileServerStatusInfo>());
 		this.users = getUsers();
+		this.serverList = new ArrayList<FileServerStatusInfo>();
 	}
 
 	/**
@@ -163,9 +162,9 @@ public class Proxy implements Runnable {
 				users.add(new UserLoginInfo(username, password, credits));
 			} catch (NumberFormatException e) {
 				System.out
-						.println("The configutation of "
-								+ username
-								+ " of the configuration file \"user.properties\" is invalid! \n\r");
+				.println("The configutation of "
+						+ username
+						+ " of the configuration file \"user.properties\" is invalid! \n\r");
 				close();
 			}
 		}
@@ -280,14 +279,8 @@ public class Proxy implements Runnable {
 			// if the port is not known the fileserver gets registered
 			fileservers.add(new FileServerStatusInfo(address,
 					fileServerTCPPort, 0, true));
-			// XXX sync by david maybe delete
-			// if a new fileserver gets online sync
-			try {
-				syncFileservers();
-			} catch (IOException e) {
-				System.out.println(e.getMessage());
-			}
 		}
+		serverList = changeServerSetToServerList(fileservers);
 	}
 
 	/**
@@ -349,20 +342,14 @@ public class Proxy implements Runnable {
 	public void checkOnline() {
 		for (FileServerStatusInfo f : fileservers) {
 			if (System.currentTimeMillis() - f.getActive() > fsCheckPeriod) {
-				if (f.isOnline())
+				if (f.isOnline()) {
 					f.setOffline();
+				}
 			} else if (!f.isOnline()) {
 				f.setOnline();
-				if (uploadChange) {
-					try {
-						uploadChange = false;
-						syncFileservers();
-					} catch (IOException e) {
-						System.out.println(e.getMessage());
-					}
-				}
 			}
 		}
+		serverList = changeServerSetToServerList(fileservers);
 	}
 
 	/**
@@ -421,100 +408,7 @@ public class Proxy implements Runnable {
 	}
 
 	/**
-	 * Send the requested upload to all {@link FileServer}s
-	 * 
-	 * XXX Astrid you dont need this method any more.
-	 * 
-	 * @param request
-	 *            the UploadRequest from a clients
-	 * @throws IOException
-	 */
-	public synchronized void distributeFile(UploadRequest request)
-			throws IOException {
-
-		uploadChange();
-		int version = 0;
-		Set<FileServerStatusInfo> fileservers = getOnlineFileservers();
-
-		for (FileServerStatusInfo f : fileservers) {
-			f.getSender().holdConnectionOpen();
-			int curVersion = getVersion(f.getSender(), request.getFilename());
-			version = curVersion > version ? curVersion : version;
-		}
-
-		RequestTO requestWithVersion = new RequestTO(new UploadRequest(
-				request.getFilename(), version, request.getContent()),
-				RequestType.Upload);
-
-		for (FileServerStatusInfo f : fileservers) {
-			f.getSender().send(requestWithVersion);
-			f.getSender().close();
-		}
-	}
-
-	/**
-	 * Synchronize all online file servers so that every file server has all
-	 * newest files only call this function when a new Fileserver comes online
-	 * 
-	 * XXX Astrid you dont need this anymore
-	 * 
-	 * @throws IOException
-	 */
-	public synchronized void syncFileservers() throws IOException {
-		// starting synchronization
-
-		// the online fileservers
-		Set<FileServerStatusInfo> fileservers = getOnlineFileservers();
-		// this map contains the files that all fileservers should have
-		Map<FileInfo, FileServerStatusInfo> updateFiles = new HashMap<FileInfo, FileServerStatusInfo>();
-
-		// getting Fileinfos from all online fileservers
-		for (FileServerStatusInfo f : fileservers) {
-
-			Set<FileInfo> files = getDetailedFiles(f.getSender());
-
-			for (FileInfo file : files) {
-				String filename = file.getFilename();
-				int version = file.getVersion();
-				if (fileVersionMap.containsKey(filename)) {
-					if (fileVersionMap.get(filename) <= version) {
-						// fileserver f has a file with newer or same version
-						fileVersionMap.put(filename, version);
-						updateFiles.put(file, f);
-					}
-				} else {
-					// fileserver f has a new file
-					fileVersionMap.put(filename, version);
-					updateFiles.put(file, f);
-				}
-			}
-		}
-
-		// All Fileservers should have these files
-
-		if (fileservers.size() != 1) {
-			// Download the latest Versions of the files
-			for (FileInfo file : updateFiles.keySet()) {
-				String filename = file.getFilename();
-				int version = file.getVersion();
-				try {
-					byte[] content = getFileContent(filename, version,
-							file.getFilesize(), updateFiles.get(file)
-									.getSender());
-					// Upload
-					UploadRequest request = new UploadRequest(filename,
-							version, content);
-					distributeFile(request);
-				} catch (IllegalArgumentException e) {
-					// Conflict...
-				}
-
-			}
-		}
-	}
-
-	/**
-	 * This method receives he content from a file from a specific Connection
+	 * This method receives the content from a file from a specific Connection
 	 * 
 	 * @param file
 	 * @param version
@@ -528,14 +422,14 @@ public class Proxy implements Runnable {
 		Response response = sender.send(new RequestTO(
 				// Download Request
 				new DownloadFileRequest(
-				// needs a Ticket
+						// needs a Ticket
 						new DownloadTicket("proxy", file,
 								ChecksumUtils
 								// with a checksum
-										.generateChecksum("proxy", file,
-												version, size), serverSocket
+								.generateChecksum("proxy", file,
+										version, size), serverSocket
 										.getInetAddress(), tcpPort)),
-				RequestType.File));
+										RequestType.File));
 		if (response instanceof DownloadFileResponse) {
 			DownloadFileResponse download = (DownloadFileResponse) response;
 			return download.getContent();
@@ -650,23 +544,6 @@ public class Proxy implements Runnable {
 	}
 
 	/**
-	 * A change that not all fileservers noticed because one was offline
-	 * 
-	 * XXX astrid maybe look at this... this has something todo with sync
-	 * 
-	 * @param uploadChange
-	 *            the uploadChange to set
-	 */
-	private synchronized void uploadChange() {
-		for (FileServerStatusInfo f : fileservers) {
-			if (!f.isOnline()) {
-				this.uploadChange = true;
-				break;
-			}
-		}
-	}
-
-	/**
 	 * Closes all Sockets and Streams
 	 */
 	public void close() {
@@ -694,4 +571,142 @@ public class Proxy implements Runnable {
 			shell.close();
 	}
 
+	/**
+	 * 
+	 * @param request
+	 * @throws IOException 
+	 */
+	public void uploadFile(UploadRequest request) throws IOException {
+		ArrayList<List<FileServerStatusInfo>> list = getGiffordsLists();
+		List<FileServerStatusInfo> fnr = list.get(0);
+		List<FileServerStatusInfo> fnw = list.get(1);
+
+		boolean exists = false;
+		Set<String> files = getFiles();
+		if (files.contains(request.getFilename())) {
+			exists = true;
+		}
+
+		//if the file exists
+		int currentVersion = 0;
+		if (exists) {
+			//get highest version
+			for (int i = 0; i < fnr.size(); i++) {
+				if (currentVersion < getVersion(fnr.get(i).getModel(), request.getFilename())) {
+					currentVersion = getVersion(fnr.get(i).getModel(), request.getFilename());
+				}
+			}
+			currentVersion++;
+		} 
+		
+		//add file to servers from nw quorum list
+		for (FileServerStatusInfo f : fnw) {
+			f.getSender().holdConnectionOpen();
+		}
+		
+		RequestTO requestWithVersion = new RequestTO(new UploadRequest(
+				request.getFilename(), currentVersion, request.getContent()),
+				RequestType.Upload);
+		
+		for (FileServerStatusInfo f : fnw) {
+			f.getSender().send(requestWithVersion);
+			f.getSender().close();
+		}
+	}
+
+	/**
+	 * Returns the nr and nw quorum lists of servers
+	 *  
+	 * @return arrayList of list of fileServerStatusInfo
+	 * 		on postion 0 is the nr list and on position 1 the nw list
+	 */
+	private ArrayList<List<FileServerStatusInfo>> getGiffordsLists() {
+		List<FileServerStatusInfo> fnr = getServerWithLowestUsage(serverList);
+		List<FileServerStatusInfo> fnw = getServerWithLowestUsage(serverList);
+		
+		//if there not enough servers in the list to fulfil the giffords scheme
+		if (fnw.size() + fnr.size() <= serverList.size()) {
+			int missingServers = serverList.size() - fnw.size() - fnr.size();
+			int count = 0;
+			int j = 0;
+			while (serverList.get(j).getUsage() == fnw.get(0).getUsage()) {
+				j++;
+			}
+			float currentUsage = serverList.get(j).getUsage();
+			
+			//add the servers with the second, third, ... lowest usage to the list until we have enough servers
+			while (count == missingServers) {
+				for (int i = 0; i < serverList.size(); i++) {
+					if (fnw.get(0).getUsage() < serverList.get(i).getUsage() && serverList.get(i).getUsage() <= currentUsage) {
+						fnw.add(serverList.get(i));
+						count++;
+					}
+				}
+			}
+		}
+		ArrayList<List<FileServerStatusInfo>> list = new ArrayList<List<FileServerStatusInfo>>();
+		list.add(fnr);
+		list.add(fnw);
+		return list;
+	}
+	
+	/**
+	 * Returns a list of servers, which have the lowest usage
+	 * 
+	 * @param quorums the list of fileServerStatusInfos, either nr or nw 
+	 * @return list of fileServerStatusInfo
+	 */
+	private List<FileServerStatusInfo> getServerWithLowestUsage(List<FileServerStatusInfo> quorums) {
+		//get lowest usage
+		long usage = quorums.get(0).getUsage();
+		for (int i = 0; i < quorums.size(); i++) {
+			if (usage > quorums.get(i).getUsage()) {
+				usage = quorums.get(i).getUsage();
+			}
+		}
+
+		//get list of servers with lowest usage
+		List<FileServerStatusInfo> list = new ArrayList<FileServerStatusInfo>();
+		for (int i = 0; i < quorums.size(); i++) {
+			if (usage == quorums.get(i).getUsage()) {
+				list.add(quorums.get(i));
+			}
+		}
+		return list;
+	}
+	
+	/**
+	 * Changes the ServerSet to a ServerList
+	 * 
+	 * @param set of FileServerStatusInfo
+	 * @return a list of FileServerStatusInfo
+	 */
+	private List<FileServerStatusInfo> changeServerSetToServerList(Set<FileServerStatusInfo> set) {
+		List<FileServerStatusInfo> list = new ArrayList<FileServerStatusInfo>();
+		Iterator<FileServerStatusInfo> it = set.iterator();
+		while (it.hasNext()) {
+			list.add(it.next());
+		}
+		return list;
+	}
+	
+	/**
+	 * Returns the number of read quorums
+	 * 
+	 * @return number
+	 */
+	public int getReadQuorums() {
+		List<FileServerStatusInfo> list = getGiffordsLists().get(0);
+		return list.size();
+	}
+	
+	/**
+	 * Returns the number of write quorums
+	 * 
+	 * @return number
+	 */
+	public int getWriteQuorums() {
+		List<FileServerStatusInfo> list = getGiffordsLists().get(1);
+		return list.size();
+	}
 }

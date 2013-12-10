@@ -10,7 +10,9 @@ import message.request.DownloadTicketRequest;
 import message.request.ListRequest;
 import message.request.LoginRequest;
 import message.request.LogoutRequest;
+import message.request.ReadQuorumRequest;
 import message.request.UploadRequest;
+import message.request.WriteQuorumRequest;
 import message.response.DownloadTicketResponse;
 import message.response.LoginResponse;
 import message.response.LoginResponse.Type;
@@ -172,6 +174,20 @@ public class ClientCli implements IClientCli {
 
 		MessageResponse response = (MessageResponse) client.send(request);
 		login = false;
+		return response;
+	}
+	
+	@Command 
+	public Response readQuorum() {
+		RequestTO request = new RequestTO(new ReadQuorumRequest(), RequestType.ReadQuorum);
+		MessageResponse response = (MessageResponse) client.send(request);
+		return response;
+	}
+	
+	@Command
+	public Response writeQuorum() {
+		RequestTO request = new RequestTO(new WriteQuorumRequest(), RequestType.WriteQuorum);
+		MessageResponse response = (MessageResponse) client.send(request);
 		return response;
 	}
 

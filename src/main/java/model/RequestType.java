@@ -8,8 +8,6 @@ import client.Client;
 
 /**
  * An enumeration of all the {@link Request} messages
- * 
- * @author David
  */
 public enum RequestType {
 	/**
@@ -45,6 +43,14 @@ public enum RequestType {
 	 * For a upload from the {@link Client} to the {@link FileServer}s
 	 */
 	Upload, 
+	/**
+	 * For a Client to get the List of the read quorums
+	 */
+	ReadQuorum,
+	/**
+	 * For a Client to get the List of the write quorums
+	 */
+	WriteQuorum,
 
 	Info, Version, DetailedList
 }

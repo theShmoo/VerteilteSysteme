@@ -1,383 +1,152 @@
 Testsuite: test.ApiTest
-Tests run: 1, Failures: 0, Errors: 0, Time elapsed: 130.007 sec
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 42,103 sec
 ------------- Standard Output ---------------
-00_login_test.txt
-16:58:05.610		client> !login alice 12345
-16:58:05.620		client: !login success
-16:58:06.110		client> !credits
-16:58:06.114		client: !credits 200
-16:58:06.611		proxy> !users
-16:58:06.613		proxy:
-16:58:06.613		1. bill            offline           200
-16:58:06.613		2. alice           online            200
-16:58:07.113		proxy> !exit
-16:58:07.115		proxy: Shutting down proxy now
-16:58:07.116		proxy: Shell closed
-16:58:07.614		client> !exit
-16:58:07.616		client:
-16:58:07.616		Could not write to Host "localhost" on port 10180
-16:58:07.616		Shutting down client now
-16:58:07.617		client: Shell closed
-16:58:08.115		fs1> !exit
-16:58:08.118		fs1: Shutting down file server now
-16:58:08.118		fs1: Shell closed
-################################################################################
-01_logout_test.txt
-16:58:12.623		client> !login alice 12345
-16:58:12.626		client: !login success
-16:58:13.124		client> !credits
-16:58:13.125		client: !credits 200
-16:58:13.625		proxy> !users
-16:58:13.626		proxy:
-16:58:13.626		1. bill            offline           200
-16:58:13.626		2. alice           online            200
-16:58:14.126		client> !logout
-16:58:14.128		client: User "alice" successfully logged out.
-16:58:14.627		proxy> !users
-16:58:14.628		proxy:
-16:58:14.628		1. bill            offline           200
-16:58:14.628		2. alice           offline           200
-16:58:15.128		proxy> !exit
-16:58:15.133		proxy: Shutting down proxy now
-16:58:15.134		proxy: Shell closed
-16:58:15.629		client> !exit
-16:58:15.630		client: Shutting down client now
-16:58:15.630		client: Shell closed
-################################################################################
 02_fileserver_test.txt
- online Fileservers: fs1 fs2
---------------------------------------------------------------------------------
-16:58:22.140		proxy> !fileservers
-16:58:22.141		proxy:
-16:58:22.141		1. 127.0.0.1       10182 online              0
-16:58:22.141		2. 127.0.0.1       10183 online              0
-16:58:22.640		fs1> !exit
-16:58:22.644		fs1: Shutting down file server now
-16:58:22.644		fs1: Shell closed
- online Fileservers: fs2
---------------------------------------------------------------------------------
-16:58:23.142		proxy> !fileservers
-16:58:23.142		proxy:
-16:58:23.142		1. 127.0.0.1       10182 offline             0
-16:58:23.142		2. 127.0.0.1       10183 online              0
-16:58:23.643		fs2> !exit
-16:58:23.644		fs2: Shutting down file server now
-16:58:23.644		fs2: Shell closed
- online Fileservers: none
---------------------------------------------------------------------------------
-16:58:24.144		proxy> !fileservers
-16:58:24.145		proxy:
-16:58:24.145		1. 127.0.0.1       10183 offline             0
-16:58:24.145		2. 127.0.0.1       10182 offline             0
- online Fileservers: fs1
---------------------------------------------------------------------------------
-16:58:26.647		proxy> !fileservers
-16:58:26.648		proxy:
-16:58:26.648		1. 127.0.0.1       10182 online              0
-16:58:26.648		2. 127.0.0.1       10183 offline             0
-16:58:27.148		fs1> !exit
-16:58:27.151		fs1: Shutting down file server now
-16:58:27.151		fs1: Shell closed
- online Fileservers: none
---------------------------------------------------------------------------------
-16:58:27.649		proxy> !fileservers
-16:58:27.650		proxy:
-16:58:27.650		1. 127.0.0.1       10182 offline             0
-16:58:27.650		2. 127.0.0.1       10183 offline             0
-16:58:28.150		proxy> !exit
-16:58:28.151		proxy: Shutting down proxy now
-16:58:28.151		proxy: Shell closed
+15:43:59.293		proxy> !fileservers
+15:43:59.298		proxy:
+15:43:59.298		1. 127.0.0.1       10183 online              0
+15:43:59.298		2. 127.0.0.1       10182 online              0
+15:43:59.792		fs1> !exit
+15:43:59.793		fs1: Shutting down file server now
+15:43:59.794		fs1: Shell closed
+15:44:00.292		proxy> !fileservers
+15:44:00.293		proxy:
+15:44:00.293		1. 127.0.0.1       10183 online              0
+15:44:00.293		2. 127.0.0.1       10182 online              0
+15:44:00.792		fs2> !exit
+15:44:00.794		fs2: Shutting down file server now
+15:44:00.795		fs2: Shell closed
+15:44:01.293		proxy> !fileservers
+15:44:01.294		proxy:
+15:44:01.294		1. 127.0.0.1       10182 online              0
+15:44:01.294		2. 127.0.0.1       10183 online              0
+15:44:03.795		proxy> !fileservers
+15:44:03.795		proxy:
+15:44:03.795		1. 127.0.0.1       10183 online              0
+15:44:03.795		2. 127.0.0.1       10182 online              0
+15:44:04.296		fs1> !exit
+15:44:04.297		fs1: Shutting down file server now
+15:44:04.298		fs1: Shell closed
+15:44:04.797		proxy> !exit
+15:44:04.798		proxy: Shutting down proxy now
+15:44:04.799		proxy: Shell closed
 ################################################################################
 03_simpletest_sim_test.txt
 Simulation of SimpleTest.java with just the commands
 --------------------------------------------------------------------------------
-16:58:34.660		client> !login alice 12345
-16:58:34.662		client: !login success
-16:58:35.161		client> !credits
-16:58:35.162		client: !credits 200
-16:58:35.662		client> !download short.txt
-16:58:35.688		client: !data dslab13
-16:58:36.164		client> !credits
-16:58:36.165		client: !credits 192
-16:58:36.665		client> !upload upload.txt
-16:58:36.679		client:
-16:58:36.679		File successfully uploaded.
-16:58:36.679		You now have 292 credits.
-16:58:37.165		client> !credits
-16:58:37.166		client: !credits 292
-16:58:37.666		client> !logout
-16:58:37.667		client: User "alice" successfully logged out.
-16:58:38.167		proxy> !exit
-16:58:38.169		proxy: Shutting down proxy now
-16:58:38.169		proxy: Shell closed
-16:58:38.667		fs1> !exit
-16:58:38.669		fs1: Shutting down file server now
-16:58:38.670		fs1: Shell closed
-16:58:39.168		client> !exit
-16:58:39.169		client: Shutting down client now
-16:58:39.169		client: Shell closed
-################################################################################
-04_filenotfound_test.txt
-Checking output for a not existing file
---------------------------------------------------------------------------------
-16:58:45.677		client> !login alice 12345
-16:58:45.679		client: !login success
-16:58:46.178		client> !download notexistingfile.txt
-16:58:46.182		client: The file "notexistingfile.txt" does not exist!
-16:58:46.680		proxy> !exit
-16:58:46.683		proxy: Shutting down proxy now
-16:58:46.684		proxy: Shell closed
-16:58:47.181		client> !exit
-16:58:47.181		client:
-16:58:47.181		Could not write to Host "localhost" on port 10180
-16:58:47.181		Shutting down client now
-16:58:47.182		client: Shell closed
-16:58:47.682		fs1> !exit
-16:58:47.684		fs1: Shutting down file server now
-16:58:47.685		fs1: Shell closed
-################################################################################
-05_fileserver_went_offline_test.txt
-Fileservers goes offline after 1 download
---------------------------------------------------------------------------------
-16:58:54.190		client> !login alice 12345
-16:58:54.192		client: !login success
-16:58:54.692		client> !credits
-16:58:54.693		client: !credits 200
-16:58:55.193		proxy> !users
-16:58:55.194		proxy:
-16:58:55.194		1. bill            offline           200
-16:58:55.194		2. alice           online            200
-16:58:55.694		client> !download short.txt
-16:58:55.704		client: !data dslab13
-16:58:56.195		fs1> !exit
-16:58:56.196		fs1: Shutting down file server now
-16:58:56.196		fs1: Shell closed
-16:58:56.696		client> !download long.txt
-16:58:56.697		client: The Host "127.0.0.1" with the port 10182 does not answer! Please try again later!
-16:58:57.197		proxy> !exit
-16:58:57.199		proxy: Shutting down proxy now
-16:58:57.199		proxy: Shell closed
-16:58:57.698		client> !exit
-16:58:57.699		client:
-16:58:57.699		Could not write to Host "localhost" on port 10180
-16:58:57.699		Shutting down client now
-16:58:57.699		client: Shell closed
-################################################################################
-06_fss_inconsistant_test.txt
-Fileservers inconsistant test
---------------------------------------------------------------------------------
-16:59:04.207		client> !login alice 12345
-16:59:04.208		client: !login success
-16:59:04.708		client> !download short.txt
-16:59:04.715		client: !data dslab13
-16:59:05.208		client> !upload data.txt
-16:59:05.216		client:
-16:59:05.216		File successfully uploaded.
-16:59:05.216		You now have 224 credits.
-16:59:05.710		client> !credits
-16:59:05.711		client: !credits 224
-16:59:08.213		client> !download data.txt
-16:59:08.220		client: !data Muehsam! Hoch 34
-16:59:08.714		fs2> !exit
-16:59:08.716		fs2: Shutting down file server now
-16:59:08.716		fs2: Shell closed
-16:59:09.214		fs1> !exit
-16:59:09.217		fs1: Shutting down file server now
-16:59:09.217		fs1: Shell closed
-16:59:09.715		proxy> !exit
-16:59:09.717		proxy: Shutting down proxy now
-16:59:09.717		proxy: Shell closed
-16:59:10.215		client> !exit
-16:59:10.216		client:
-16:59:10.216		Could not write to Host "localhost" on port 10180
-16:59:10.216		Shutting down client now
-16:59:10.216		client: Shell closed
-################################################################################
-07_startup-PCF_shutdown-FPC_test.txt
-Starting Proxy->Client->Fileserver -- Shutdown Fileserver->Proxy->Client
---------------------------------------------------------------------------------
-16:59:16.722		client> !login bill 23456
-16:59:16.723		client: !login success
-16:59:17.222		client> !download short.txt
-16:59:17.229		client: !data dslab13
-16:59:17.723		fs1> !exit
-16:59:17.724		fs1: Shutting down file server now
-16:59:17.724		fs1: Shell closed
-16:59:18.224		proxy> !exit
-16:59:18.226		proxy: Shutting down proxy now
-16:59:18.227		proxy: Shell closed
-16:59:18.725		client> !exit
-16:59:18.726		client:
-16:59:18.726		Could not write to Host "localhost" on port 10180
-16:59:18.726		Shutting down client now
-16:59:18.728		client: Shell closed
-################################################################################
-08_startup-FPC_shutdown-PCF_test.txt
-Starting Fileserver->Proxy->Client -- Shutdown Proxy->Client->Fileserver
---------------------------------------------------------------------------------
-16:59:25.233		client> !login bill 23456
-16:59:25.235		client: !login success
-16:59:25.734		client> !download short.txt
-16:59:25.742		client: !data dslab13
-16:59:26.235		proxy> !exit
-16:59:26.238		proxy: Shutting down proxy now
-16:59:26.239		proxy: Shell closed
-16:59:26.735		client> !exit
-16:59:26.736		client:
-16:59:26.736		Could not write to Host "localhost" on port 10180
-16:59:26.736		Shutting down client now
-16:59:26.737		client: Shell closed
-16:59:27.236		fs1> !exit
-16:59:27.240		fs1: Shutting down file server now
-16:59:27.240		fs1: Shell closed
-################################################################################
-09_startup-CFP_shutdown-CFP_test.txt
-Starting Client->Fileserver->Proxy -- Shutdown Client->Fileserver->Proxy
---------------------------------------------------------------------------------
-16:59:27.740		client: The System is offline! Please try again later
-16:59:27.741		client: Shell closed
-16:59:33.745		fs1> !exit
-16:59:33.746		fs1: Shutting down file server now
-16:59:33.746		fs1: Shell closed
-16:59:34.246		proxy> !exit
-16:59:34.247		proxy: Shutting down proxy now
-16:59:34.247		proxy: Shell closed
-################################################################################
-10_usecase_multiclient_test.txt
-2 Clients doing operations over the proxy
---------------------------------------------------------------------------------
-16:59:42.757		proxy> !users
-16:59:42.758		proxy:
-16:59:42.758		1. bill            offline           200
-16:59:42.758		2. alice           offline           200
-16:59:43.258		client> !login alice 12345
-16:59:43.261		client: !login success
-16:59:43.759		client> !credits
-16:59:43.760		client: !credits 200
-16:59:44.261		proxy> !users
-16:59:44.262		proxy:
-16:59:44.262		1. bill            offline           200
-16:59:44.262		2. alice           online            200
-16:59:44.762		client1> !login bill 23456
-16:59:44.764		client1: !login success
-16:59:45.263		client1> !credits
-16:59:45.264		client1: !credits 200
-16:59:45.764		proxy> !users
-16:59:45.764		proxy:
-16:59:45.764		1. bill            online            200
-16:59:45.764		2. alice           online            200
-16:59:46.265		client1> !upload upload.txt
-16:59:46.271		client1:
-16:59:46.271		File successfully uploaded.
-16:59:46.271		You now have 300 credits.
-16:59:46.766		client1> !credits
-16:59:46.767		client1: !credits 300
-16:59:47.267		client> !download upload.txt
-16:59:47.274		client: !data Bitte die Lehrveranstaltung im TISS bewerten. ;-)
-16:59:47.768		client> !credits
-16:59:47.769		client: !credits 150
-16:59:48.270		proxy> !exit
-16:59:48.272		proxy: Shutting down proxy now
-16:59:48.272		proxy: Shell closed
-16:59:48.770		client> !exit
-16:59:48.770		client:
-16:59:48.770		Could not write to Host "localhost" on port 10180
-16:59:48.770		Shutting down client now
-16:59:48.771		client: Shell closed
-16:59:49.271		client1> !exit
-16:59:49.272		client1:
-16:59:49.272		Could not write to Host "localhost" on port 10180
-16:59:49.272		Shutting down client now
-16:59:49.273		client1: Shell closed
-16:59:49.771		fs1> !exit
-16:59:49.772		fs1: Shutting down file server now
-16:59:49.772		fs1: Shell closed
+15:44:11.315		client> !login alice 12345
+15:44:11.323		client: !login success
+15:44:11.816		client> !credits
+15:44:11.822		client: !credits 200
+15:44:12.317		client> !download short.txt
+15:44:12.338		client: !data dslab13
+15:44:12.817		client> !credits
+15:44:12.818		client: !credits 192
+15:44:13.318		client> !upload upload.txt
+15:44:13.323		client:
+15:44:13.323		File successfully uploaded.
+15:44:13.323		You now have 242 credits.
+15:44:13.819		client> !credits
+15:44:13.820		client: !credits 242
+15:44:14.319		client> !logout
+15:44:14.323		client: User "alice" logged out!
+15:44:14.819		proxy> !exit
+15:44:14.821		proxy: Shutting down proxy now
+15:44:14.822		proxy: Shell closed
+15:44:15.320		fs1> !exit
+15:44:15.321		fs1: Shutting down file server now
+15:44:15.323		fs1: Shell closed
+15:44:15.820		client> !exit
+15:44:15.821		client: Shutting down client now
+15:44:15.822		client: Shell closed
 ################################################################################
 11_usecase_buy_credits_test.txt
 Showing all sorts of credits operations
 --------------------------------------------------------------------------------
-16:59:58.281		proxy> !users
-16:59:58.282		proxy:
-16:59:58.282		1. bill            offline           200
-16:59:58.282		2. alice           offline           200
-16:59:58.782		client> !login alice 12345
-16:59:58.784		client: !login success
-16:59:59.283		client> !credits
-16:59:59.284		client: !credits 200
-16:59:59.784		client> !list
-16:59:59.787		client:
-16:59:59.787		data.txt
-16:59:59.787		long.txt
-16:59:59.787		short.txt
-16:59:59.787		upload.txt
-17:00:00.286		client> !download short.txt
-17:00:00.294		client: !data dslab13
-17:00:00.787		proxy> !users
-17:00:00.788		proxy:
-17:00:00.788		1. bill            offline           200
-17:00:00.788		2. alice           online            192
-17:00:01.288		client> !credits
-17:00:01.289		client: !credits 192
-17:00:01.788		client> !download long.txt
-17:00:01.791		client:
-17:00:01.791		Sry! You have too less credits!
-17:00:01.791		You have 192 credits and you need 1000 credits! To buy credits type: "!buy 808"
-17:00:02.289		client> !buy 1000
-17:00:02.295		client: !credits 1192
-17:00:02.790		client> !download long.txt
-17:00:02.799		client:
-17:00:02.799		!data ###################################################################################################
-17:00:02.799		###################################################################################################
-17:00:02.799		###################################################################################################
-17:00:02.799		###################################################################################################
-17:00:02.799		###################################################################################################
-17:00:02.799		###################################################################################################
-17:00:02.799		###################################################################################################
-17:00:02.799		###################################################################################################
-17:00:02.799		###################################################################################################
-17:00:02.799		###################################################################################################
-17:00:03.290		proxy> !users
-17:00:03.290		proxy:
-17:00:03.290		1. bill            offline           200
-17:00:03.290		2. alice           online            192
-17:00:03.791		client> !credits
-17:00:03.792		client: !credits 192
-17:00:04.292		client> !ls
-17:00:04.293		client:
-17:00:04.293		name	size	version
-17:00:04.293		data.txt	16	0
-17:00:04.293		long.txt	1000	0
-17:00:04.293		short.txt	8	0
-17:00:04.293		upload.txt	50	0
-17:00:04.793		client> !upload upload.txt
-17:00:04.800		client:
-17:00:04.800		File successfully uploaded.
-17:00:04.800		You now have 292 credits.
-17:00:05.295		proxy> !users
-17:00:05.295		proxy:
-17:00:05.295		1. bill            offline           200
-17:00:05.295		2. alice           online            292
-17:00:05.796		client> !credits
-17:00:05.796		client: !credits 292
-17:00:06.297		proxy> !fileservers
-17:00:06.298		proxy:
-17:00:06.298		1. 127.0.0.1       10183 online           1000
-17:00:06.298		2. 127.0.0.1       10182 online              8
-17:00:06.797		client> !logout
-17:00:06.798		client: User "alice" successfully logged out.
-17:00:07.299		client> !exit
-17:00:07.299		client: Shutting down client now
-17:00:07.299		client: Shell closed
-17:00:07.800		fs1> !exit
-17:00:07.801		fs1: Shutting down file server now
-17:00:07.801		fs1: Shell closed
-17:00:08.301		fs2> !exit
-17:00:08.302		fs2: Shutting down file server now
-17:00:08.303		fs2: Shell closed
-17:00:08.802		proxy> !exit
-17:00:08.804		proxy: Shutting down proxy now
-17:00:08.804		proxy: Shell closed
+15:44:24.332		proxy> !users
+15:44:24.336		proxy:
+15:44:24.336		1. bill            offline           200
+15:44:24.336		2. alice           offline           200
+15:44:24.832		client> !login alice 12345
+15:44:24.836		client: !login success
+15:44:25.333		client> !credits
+15:44:25.334		client: !credits 200
+15:44:25.833		client> !list
+15:44:25.849		client:
+15:44:25.849		data.txt
+15:44:25.849		long.txt
+15:44:25.849		notexistingfile.txt
+15:44:25.849		short.txt
+15:44:25.849		upload.txt
+15:44:26.334		client> !download short.txt
+15:44:26.346		client: !data dslab13
+15:44:26.834		proxy> !users
+15:44:26.835		proxy:
+15:44:26.835		1. bill            offline           200
+15:44:26.835		2. alice           online            192
+15:44:27.335		client> !credits
+15:44:27.336		client: !credits 192
+15:44:27.835		client> !download long.txt
+15:44:27.839		client:
+15:44:27.839		Sry! You have too less credits!
+15:44:27.839		You have 192 credits and you need 1000 credits! To buy credits type: "!buy 808"
+15:44:28.336		client> !buy 1000
+15:44:28.346		client: !credits 1192
+15:44:28.837		client> !download long.txt
+15:44:28.847		client:
+15:44:28.847		!data ###################################################################################################
+15:44:28.847		###################################################################################################
+15:44:28.847		###################################################################################################
+15:44:28.847		###################################################################################################
+15:44:28.847		###################################################################################################
+15:44:28.847		###################################################################################################
+15:44:28.847		###################################################################################################
+15:44:28.847		###################################################################################################
+15:44:28.847		###################################################################################################
+15:44:28.847		###################################################################################################
+15:44:29.337		proxy> !users
+15:44:29.338		proxy:
+15:44:29.338		1. bill            offline           200
+15:44:29.338		2. alice           online            192
+15:44:29.838		client> !credits
+15:44:29.839		client: !credits 192
+15:44:30.338		client> !ls
+15:44:30.340		client:
+15:44:30.340		java.lang.IllegalArgumentException: Command '!ls' not registered.
+15:44:30.340			at cli.Shell.invoke(Shell.java:226)
+15:44:30.340			at cli.Shell.run(Shell.java:71)
+15:44:30.340			at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1145)
+15:44:30.340			at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:615)
+15:44:30.340			at java.lang.Thread.run(Thread.java:744)
+15:44:30.838		client> !upload upload.txt
+15:44:30.845		client:
+15:44:30.845		File successfully uploaded.
+15:44:30.845		You now have 242 credits.
+15:44:31.339		proxy> !users
+15:44:31.340		proxy:
+15:44:31.340		1. bill            offline           200
+15:44:31.340		2. alice           online            242
+15:44:31.840		client> !credits
+15:44:31.841		client: !credits 242
+15:44:32.340		proxy> !fileservers
+15:44:32.341		proxy:
+15:44:32.341		1. 127.0.0.1       10182 online              8
+15:44:32.341		2. 127.0.0.1       10183 online           1000
+15:44:32.841		client> !logout
+15:44:32.842		client: User "alice" logged out!
+15:44:33.341		client> !exit
+15:44:33.342		client: Shutting down client now
+15:44:33.343		client: Shell closed
+15:44:33.841		fs1> !exit
+15:44:33.842		fs1: Shutting down file server now
+15:44:33.843		fs1: Shell closed
+15:44:34.342		fs2> !exit
+15:44:34.343		fs2: Shutting down file server now
+15:44:34.343		fs2: Shell closed
+15:44:34.842		proxy> !exit
+15:44:34.843		proxy: Shutting down proxy now
+15:44:34.844		proxy: Shell closed
 ################################################################################
 ------------- ---------------- ---------------
 
-Testcase: test took 129.993 sec
+Testcase: test took 42,093 sec

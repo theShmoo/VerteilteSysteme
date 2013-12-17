@@ -1,7 +1,5 @@
 package proxy;
 
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -20,20 +18,6 @@ import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.security.Key;
-
-import javax.crypto.Mac;
-
-import org.bouncycastle.util.encoders.Base64;
-import org.bouncycastle.util.encoders.Hex;
-
-import java.security.GeneralSecurityException;
-import java.security.MessageDigest;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.io.FileInputStream;
-
-import javax.crypto.spec.SecretKeySpec; 
 
 import message.Response;
 import message.request.DetailedListRequest;
@@ -62,24 +46,15 @@ import util.UserLoader;
 import cli.Shell;
 import client.Client;
 
-/**
- * 
- * @author Group 66 based upon Lab1 version of David
- */
 public class Proxy implements Runnable {
 
 	private Shell shell;
 	private ProxyCli proxyCli;
 	private ExecutorService executor;
-	
-	
 
 	// Configuration Parameters
 	private int tcpPort, udpPort;
-	private long fsTimeout, fsCheckPeriod;  
-	private Mac hMac;
-	private Key key;
-	private final String B64 = "a-zA-Z0-9/+"; 
+	private long fsTimeout, fsCheckPeriod;
 
 	private Set<UserLoginInfo> users;
 	private Set<FileServerStatusInfo> fileservers;
@@ -91,11 +66,9 @@ public class Proxy implements Runnable {
 	private List<ProxyServerSocketThread> proxyTcpHandlers;
 	private boolean running;
 	private boolean uploadChange;
-	 
 
 	//Replication Parameters
 	private List<FileServerStatusInfo> serverList;
-	
 
 	/**
 	 * Initialize a new Proxy
@@ -126,7 +99,7 @@ public class Proxy implements Runnable {
 	 */
 	private void init(Shell shell, Config config) {
 		this.executor = Executors.newCachedThreadPool();
-		this.hMac = null;
+
 		this.proxyCli = new ProxyCli(this);
 
 		this.shell = shell;
@@ -137,8 +110,6 @@ public class Proxy implements Runnable {
 		this.uploadChange = false;
 
 		getProxyData(config);
-
-		createhMAC(key);
 
 		this.proxyTcpHandlers = new ArrayList<ProxyServerSocketThread>();
 		//		this.fileVersionMap = new ConcurrentHashMap<String, Integer>();
@@ -155,22 +126,7 @@ public class Proxy implements Runnable {
 			this.tcpPort = config.getInt("tcp.port");
 			this.udpPort = config.getInt("udp.port");
 			this.fsTimeout = config.getInt("fileserver.timeout");
-			this.fsCheckPeriod = config.getInt("fileserver.checkPeriod"); 
-			byte[] keyBytes = new byte[1024]; 
-			try { 
-			File hmackey = new File(config.getString("hmac.key"));
-			FileInputStream fis = new FileInputStream(hmackey);
-			fis.read(keyBytes);
-			fis.close();
-			byte[] input = Hex.decode(keyBytes);
-			this.key = new SecretKeySpec(input, "HmacSHA256");
-			
-			} catch (FileNotFoundException e) { 
-				System.out.println("Error in getProxyData: Keyloading 1");
-			}
-			 catch (IOException e) { 
-				 System.out.println("Error in getProxyData: Keyloading 2");
-			}  
+			this.fsCheckPeriod = config.getInt("fileserver.checkPeriod");
 		} catch (NumberFormatException e) {
 			try {
 				shell.writeLine("The configuration file \"proxy.properties\" is invalid! \n\r");
@@ -185,7 +141,7 @@ public class Proxy implements Runnable {
 		this.users = getUsers();
 		this.serverList = new ArrayList<FileServerStatusInfo>();
 	}
- 
+
 	/**
 	 * Returns all registered users from the users.properties file
 	 * 
@@ -358,86 +314,7 @@ public class Proxy implements Runnable {
 		}
 		return null;
 	}
- 
-	/** 
-	 * inits hMac with key
-	 * @param key
-	 */
-	public void createhMAC(Key key){  
-		try {
-			this.hMac = Mac.getInstance("HmacSHA256");
-			this.hMac.init(key); 
-		} catch (NoSuchAlgorithmException e) {  
-			System.out.println("createhashmacerror 1");
-		} catch (InvalidKeyException e) {  
-			System.out.println("createhashmacerror 2");
-		}    
-	}
-  
-	/** 
-	 * creates a hash for a given message
-	 * @param message  
-	 * @return hash
-	 */
-	public byte[] createHashforMessage(String message){
-		hMac.update(message.getBytes()); 
-		byte[] hash = hMac.doFinal(message.getBytes());
-		return hash;
-	}  
-	
-	/** 
-	 * prepends a message with a base64 encoded hash
-	 * @param hash 
-	 * @param message
-	 * @return prepended message
-	 */
-	public String prependmessage(byte[] hash, String message){
-		message = new String(Base64.encode(hash)) + " " + message; 
-		return message;
-	}
-	
-	/** 
-	 * verifies a message 
-	 * @param message   
-	 * @return null if an error occurred or the message without hash
-	 */
-    public String verify(String message)
-    {
-    	 
-      if (message == null){
-        System.out.println("Error in verify message is null");
-    	  return null;
-        }
-      if (message.charAt(0) == '!')
-        return message;
- 
-		assert message.matches("["+B64+"]{43}= [\\s[^\\s]]+");
-		System.out.println("Base64 Encoding Error");
-      
-      int index = message.indexOf(' ');
-    	
-      if (index == -1)
-      {
-        System.out.println("Error message format error");
-        System.out.println(message);
-        return null;
-      }
-   
-        //verify
-        String hashFM = message.substring(0, index);
-        String messageWithoutHash = message.substring(index + 1);
-        String hashNG = new String(Base64.encode(this.createHashforMessage(messageWithoutHash)));
-        if (!hashFM.equals(hashNG))
-        {
-          System.out.println("Error: invalid MAC:");
-          System.out.println(message); 
-           return null;
-        }
-        message = messageWithoutHash; 
-        
-      return message;
-    }
- 	
+
 	/**
 	 * Iterate through all {@link FileServer}s and get the one with the lowest
 	 * usage. This is synchronized because the fileservers may change
@@ -721,16 +598,16 @@ public class Proxy implements Runnable {
 			}
 			currentVersion++;
 		} 
-
+		
 		//add file to servers from nw quorum list
 		for (FileServerStatusInfo f : fnw) {
 			f.getSender().holdConnectionOpen();
 		}
-
+		
 		RequestTO requestWithVersion = new RequestTO(new UploadRequest(
 				request.getFilename(), currentVersion, request.getContent()),
 				RequestType.Upload);
-
+		
 		for (FileServerStatusInfo f : fnw) {
 			f.getSender().send(requestWithVersion);
 			f.getSender().close();
@@ -746,7 +623,7 @@ public class Proxy implements Runnable {
 	private ArrayList<List<FileServerStatusInfo>> getGiffordsLists() {
 		List<FileServerStatusInfo> fnr = getServerWithLowestUsage(serverList);
 		List<FileServerStatusInfo> fnw = getServerWithLowestUsage(serverList);
-
+		
 		//if there not enough servers in the list to fulfil the giffords scheme
 		if (fnw.size() + fnr.size() <= serverList.size()) {
 			int missingServers = serverList.size() - fnw.size() - fnr.size();
@@ -756,7 +633,7 @@ public class Proxy implements Runnable {
 				j++;
 			}
 			float currentUsage = serverList.get(j).getUsage();
-
+			
 			//add the servers with the second, third, ... lowest usage to the list until we have enough servers
 			while (count == missingServers) {
 				for (int i = 0; i < serverList.size(); i++) {
@@ -772,7 +649,7 @@ public class Proxy implements Runnable {
 		list.add(fnw);
 		return list;
 	}
-
+	
 	/**
 	 * Returns a list of servers, which have the lowest usage
 	 * 
@@ -797,7 +674,7 @@ public class Proxy implements Runnable {
 		}
 		return list;
 	}
-
+	
 	/**
 	 * Changes the ServerSet to a ServerList
 	 * 
@@ -812,7 +689,7 @@ public class Proxy implements Runnable {
 		}
 		return list;
 	}
-
+	
 	/**
 	 * Returns the number of read quorums
 	 * 
@@ -822,7 +699,7 @@ public class Proxy implements Runnable {
 		List<FileServerStatusInfo> list = getGiffordsLists().get(0);
 		return list.size();
 	}
-
+	
 	/**
 	 * Returns the number of write quorums
 	 * 

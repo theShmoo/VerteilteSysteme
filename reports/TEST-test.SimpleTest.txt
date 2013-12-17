@@ -1,1 +1,9 @@
 Testsuite: test.SimpleTest
+Tests run: 1, Failures: 0, Errors: 0, Time elapsed: 6.032 sec
+------------- Standard Output ---------------
+17:00:15.337		fs1: Shell closed
+17:00:15.336		proxy: Shell closed
+17:00:15.338		client: Shell closed
+------------- ---------------- ---------------
+
+Testcase: test took 6.031 sec

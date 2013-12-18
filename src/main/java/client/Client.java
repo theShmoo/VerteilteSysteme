@@ -145,7 +145,8 @@ public class Client implements IClient, Runnable {
 			clientThread.holdConnectionOpen();
 		} catch (IOException e) {
 			try {
-				shell.writeLine("The System is offline! Please try again later");
+				if(shell != null)
+					shell.writeLine("The System is offline! Please try again later");
 				exit();
 			} catch (IOException e1) {
 				e1.printStackTrace();

@@ -1,11 +1,20 @@
 package util;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.security.KeyPair;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+
+import org.bouncycastle.openssl.PEMReader;
+import org.bouncycastle.openssl.PasswordFinder;
 
 /**
  * Utilities for file operations
@@ -13,7 +22,7 @@ import java.io.IOException;
  * @author David
  */
 public class FileUtils {
-	
+
 	/**
 	 * A FilenameFilter that only allows ".txt"-Files
 	 */
@@ -41,35 +50,31 @@ public class FileUtils {
 	public synchronized static byte[] read(String path, String filename)
 			throws IOException {
 		File file = new File(path, filename);
-		byte content[] = new byte[(int)file.length()];
-		
-		
+		byte content[] = new byte[(int) file.length()];
+
 		FileInputStream fin = null;
 		try {
 			// create FileInputStream object
 			fin = new FileInputStream(file);
-			// Reads up to certain bytes of data from this input stream into an array of bytes.
+			// Reads up to certain bytes of data from this input stream into an
+			// array of bytes.
 			fin.read(content);
-			
-		}
-		catch (FileNotFoundException e) {
+
+		} catch (FileNotFoundException e) {
 			return null;
-		}
-		catch (IOException ioe) {
+		} catch (IOException ioe) {
 			System.out.println("Exception while reading file " + ioe);
-		}
-		finally {
+		} finally {
 			// close the streams using close method
 			try {
 				if (fin != null) {
 					fin.close();
 				}
-			}
-			catch (IOException ioe) {
+			} catch (IOException ioe) {
 				System.out.println("Error while closing stream: " + ioe);
 			}
 		}
-	
+
 		return content;
 	}
 
@@ -83,7 +88,8 @@ public class FileUtils {
 	 * @param filename
 	 *            the filename
 	 */
-	public synchronized static void write(byte[] content, String path, String filename) {
+	public synchronized static void write(byte[] content, String path,
+			String filename) {
 		File file = new File(path, filename);
 		FileOutputStream stream = null;
 		try {
@@ -107,15 +113,19 @@ public class FileUtils {
 		}
 	}
 
-	
 	/**
-	 * Returns if the file exists 
-	 * @param path the Path of the file
-	 * @param filename the filename
+	 * Returns if the file exists
+	 * 
+	 * @param path
+	 *            the Path of the file
+	 * @param filename
+	 *            the filename
 	 * @return <code>true</code> if the file exists
 	 */
 	public static boolean check(String path, String filename) {
 		File file = new File(path, filename);
 		return file.isFile();
 	}
+
+	
 }

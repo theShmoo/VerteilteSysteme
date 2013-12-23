@@ -55,16 +55,31 @@ public class ClientCli implements IClientCli {
 	@Override
 	@Command
 	public LoginResponse login(String username, String password) {
-		LoginRequest data = new LoginRequest(username, password);
-		RequestTO request = new RequestTO(data, RequestType.Login);
-		Response response = client.send(request);
-		if (response instanceof LoginResponse) {
-			LoginResponse r = (LoginResponse) response;
-			login = true;
-			return r;
-		}
-		System.out.println(response.toString());
-		return new LoginResponse(Type.WRONG_CREDENTIALS);
+			if(login || !client.checkKey(username,password)){
+				return new LoginResponse(Type.WRONG_CREDENTIALS);
+			}
+			
+			byte[] ciphertext = client.getClientChallenge(username);
+			
+			if(ciphertext != null){			
+				LoginRequest data = new LoginRequest(ciphertext);
+				RequestTO request = new RequestTO(data, RequestType.Login);
+				Response response = client.send(request);
+				
+				if (response instanceof LoginResponse) {
+					LoginResponse r = (LoginResponse) response;
+					ciphertext = client.solveProxyChallenge(r.getProxyChallenge(),username,password);
+					if(ciphertext != null){
+						data = new LoginRequest(ciphertext);
+						request = new RequestTO(data, RequestType.Login);
+						response = client.send(request);
+						LoginResponse lresp = client.checkLogin(response);
+						login = lresp.getType() == Type.SUCCESS;
+						return lresp;
+					}
+				}
+			}
+			return new LoginResponse(Type.WRONG_CREDENTIALS); //XXX change!
 	}
 
 	/*
@@ -171,9 +186,9 @@ public class ClientCli implements IClientCli {
 	public MessageResponse logout() throws IOException {
 		RequestTO request = new RequestTO(new LogoutRequest(),
 				RequestType.Logout);
-
 		MessageResponse response = (MessageResponse) client.send(request);
 		login = false;
+		client.logout();
 		return response;
 	}
 	

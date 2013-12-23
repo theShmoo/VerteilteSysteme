@@ -17,10 +17,12 @@ import message.Response;
 public class LoginResponse implements Response {
 	private static final long serialVersionUID = 3134831924072300109L;
 
+	private final byte[] proxyChallenge;
+	
 	public enum Type {
 		SUCCESS("Successfully logged in."),
-		WRONG_CREDENTIALS("Wrong username or password.");
-
+		WRONG_CREDENTIALS("Wrong username or password."),
+		OK("");
 		String message;
 
 		Type(String message) {
@@ -30,16 +32,41 @@ public class LoginResponse implements Response {
 
 	private final Type type;
 
-	public LoginResponse(Type type) {
+	/**
+	 * @param proxyChallenge 
+	 */
+	public LoginResponse(byte[] proxyChallenge) {
+		this.proxyChallenge = proxyChallenge;
+		this.type = Type.OK;
+	}
+	
+	/**
+	 * @param type
+	 */
+	public LoginResponse(Type type){
 		this.type = type;
+		this.proxyChallenge = new byte[0];
 	}
 
+	/**
+	 * @return the Proxy Challenge
+	 */
+	public byte[] getProxyChallenge() {
+		return proxyChallenge;
+	}
+	
+	/**
+	 * @return the type
+	 */
 	public Type getType() {
 		return type;
 	}
 
 	@Override
 	public String toString() {
-		return "!login " + getType().name().toLowerCase();
+		if(type == Type.OK){
+			return "!ok " + new String(proxyChallenge);
+		}
+		return "!login " + type.message;
 	}
 }

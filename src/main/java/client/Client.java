@@ -2,22 +2,33 @@ package client;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.security.auth.login.LoginException;
 
 import message.Request;
 import message.Response;
 import message.request.DownloadFileRequest;
 import message.response.DownloadFileResponse;
+import message.response.LoginResponse;
+import message.response.LoginResponse.Type;
 import message.response.MessageResponse;
 import model.DownloadTicket;
 import model.FileInfo;
 import model.RequestTO;
 import model.RequestType;
+
+import org.bouncycastle.util.encoders.Base64;
+
 import proxy.Proxy;
 import server.FileServer;
 import util.Config;
 import util.FileUtils;
+import util.SecurityUtils;
 import util.SingleServerSocketCommunication;
 import cli.Shell;
 
@@ -41,6 +52,13 @@ public class Client implements IClient, Runnable {
 
 	// Ram data
 	private List<FileInfo> files;
+
+	// security
+	private PublicKey proxyPublicKey;
+	private String keyDir;
+	private byte[] clientChallenge;
+	private byte[] secretKey;
+	private byte[] IV;
 
 	/**
 	 * Create a new Client with the given {@link Shell} for its commands
@@ -79,6 +97,9 @@ public class Client implements IClient, Runnable {
 			this.proxyHost = config.getString("proxy.host");
 			this.downloadDir = config.getString("download.dir");
 			this.folder = new File(downloadDir);
+			this.keyDir = config.getString("keys.dir");
+			this.proxyPublicKey = SecurityUtils.readPublicKey(config
+					.getString("proxy.key"));
 		} catch (NumberFormatException e) {
 			System.out
 					.println("The configuration file \"client.properties\" is invalid! \n\r");
@@ -145,14 +166,14 @@ public class Client implements IClient, Runnable {
 			clientThread.holdConnectionOpen();
 		} catch (IOException e) {
 			try {
-				shell.writeLine("The System is offline! Please try again later");
+				if (shell != null)
+					shell.writeLine("The System is offline! Please try again later");
 				exit();
 			} catch (IOException e1) {
 				e1.printStackTrace();
 			}
 		}
-		
-		
+
 	}
 
 	/**
@@ -254,9 +275,148 @@ public class Client implements IClient, Runnable {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		if(shellThread != null)
+		if (shellThread != null)
 			shellThread.interrupt();
 		if (shell != null)
 			shell.close();
+	}
+
+	/**
+	 * Returns a Base64 encoded encrypted message that contains:
+	 * <ul>
+	 * <li>the Username</li>
+	 * <li>the base64 encoded Client Challenge</li>
+	 * </ul>
+	 * 
+	 * @param username
+	 *            the username of the login requesting user
+	 * @return a Base64 encoded encrypted message
+	 */
+	public byte[] getClientChallenge(String username) {
+
+		// generate a 32 bit client challenge
+		SecureRandom secureRandom = new SecureRandom();
+		clientChallenge = new byte[32];
+		secureRandom.nextBytes(clientChallenge);
+
+		// combine the challenge with the rest
+		username = "!login " + username + " ";
+		byte[] user = username.getBytes();
+		byte[] b64ClientChallenge = Base64.encode(clientChallenge);
+
+		byte[] message = SecurityUtils.combineByteArrays(user,
+				b64ClientChallenge);
+
+		// Encrypt the base64 message with the public key from the proxy
+		byte[] encryptedMessage = SecurityUtils
+				.encrypt(proxyPublicKey, message);
+
+		// encode the final message again with Base64
+		return Base64.encode(encryptedMessage);
+	}
+
+	/**
+	 * Returns the byte array that should get sent to the proxy with the
+	 * resolved proxy challenge
+	 * 
+	 * @param username
+	 *            the username of the user
+	 * @param password
+	 *            the password of the private key of the user
+	 * @param encryptedMessage
+	 *            the base64 encoded message encrypted with the public key of
+	 *            the user from the proxy with the challange
+	 * @return the resolved proxy challenge
+	 */
+	public byte[] solveProxyChallenge(byte[] encryptedMessage, String username,
+			String password) {
+
+		// decrypt the encryptedMessage with the private Key of the User
+		byte[] b64message = null;
+		try {
+			b64message = SecurityUtils.decrypt(
+					getPrivateKey(username, password),
+					Base64.decode(encryptedMessage));
+		} catch (LoginException e) {
+			System.out.println(e.getMessage());
+			return null;
+		}
+
+		// get data out of message
+		// !ok <client-challenge> <proxy-challenge> <secret-key> <iv-parameter>.
+		String[] strs = new String(b64message).split(" ");
+
+		if (strs[1].equals(new String(Base64.encode(clientChallenge)))) {
+			secretKey = strs[3].getBytes();
+			IV = strs[4].getBytes();
+			clientThread.setIV(Base64.decode(IV));
+			clientThread.setKey(Base64.decode(secretKey));
+			clientThread.activateSecureConnection();
+			return strs[2].getBytes();
+		}
+		return null;
+
+	}
+
+	private PrivateKey getPrivateKey(String username, String password) throws LoginException {
+		if (FileUtils.check(keyDir, username + ".pem")) {
+			return SecurityUtils.readPrivateKey(keyDir + "\\" + username
+					+ ".pem", password);
+		}
+		return null;
+	}
+
+	/**
+	 * @param response
+	 * @return The Login Response
+	 */
+	public LoginResponse checkLogin(Response response) {
+		if (response instanceof LoginResponse
+				&& ((LoginResponse) response).getType() == Type.SUCCESS) {
+			return (LoginResponse) response;
+		}
+		clientThread.deactivateSecureConnection();
+		return new LoginResponse(Type.WRONG_CREDENTIALS);
+	}
+
+	/**
+	 * Checks if the connection to the proxy is valid, if not try to connect
+	 * again. If not possible throw an error
+
+	 */
+	public void checkConnection() {
+		if (!clientThread.isActive()) {
+			try {
+				clientThread.holdConnectionOpen();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	/**
+	 * Check if the data is valid
+	 * 
+	 * @param password the password of the user that tries to logon
+	 * @param username the username of the user that tries to logon
+	 * @return true if the key is valid
+	 */
+	public boolean checkKey(String username, String password){
+		
+		try {
+			getPrivateKey(username,password);
+		} catch (LoginException e) {
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Deactivate the secure connection after logout
+	 */
+	public void logout() {
+		clientThread.deactivateSecureConnection();
 	}
 }

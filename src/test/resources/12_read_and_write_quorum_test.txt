@@ -1,0 +1,18 @@
+%Testing the read- and write quorum
+*	startProxy proxy
+*	startClient client
+*	startFileServer fs1
+*	startFileServer fs2
+*	startFileServer fs3
+*	startFileServer fs4
+
+client: !login alice 12345
+client: !readQuorum
+client: !writeQuorum
+
+client: !exit
+proxy:	!exit
+fs1: !exit
+fs2: !exit
+fs3: !exit
+fs4: !exit

@@ -1,8 +1,8 @@
 package util;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
@@ -15,14 +15,19 @@ import model.RequestTO;
  * 
  * @author David
  */
-public class SingleServerSocketCommunication {
+public class SingleServerSocketCommunication implements SecureChannel {
 
 	private Socket socket = null;
-	private ObjectOutputStream outputStream;
-	private ObjectInputStream inStream;
+	private DataOutputStream outputStream;
+	private DataInputStream inStream;
 	private String host;
 	private int port;
 	private boolean running;
+
+	// Security
+	private boolean encrypted = false;
+	private byte[] key;
+	private byte[] IV;
 
 	/**
 	 * Initialize a new SingleServerSocketCommunication for TCP connections
@@ -41,8 +46,8 @@ public class SingleServerSocketCommunication {
 	private void connect() throws IOException {
 		try {
 			socket = new Socket(host, port);
-			outputStream = new ObjectOutputStream(socket.getOutputStream());
-			inStream = new ObjectInputStream(socket.getInputStream());
+			outputStream = new DataOutputStream(socket.getOutputStream());
+			inStream = new DataInputStream(socket.getInputStream());
 		} catch (UnknownHostException e) {
 			System.err.println("Don't know about host " + host);
 			close();
@@ -66,21 +71,28 @@ public class SingleServerSocketCommunication {
 						+ " does not answer! Please try again later!");
 			}
 		}
-		Object input = null;
 		Response response = null;
 
 		try {
-			outputStream.writeObject(request);
-			input = inStream.readObject();
-			if (input == null || !(input instanceof Response)) {
-				return new MessageResponse("The response from Host \"" + host
-						+ "\" with the port " + port
-						+ " could not get interpreted correctly.");
-			} else {
-				response = (Response) input;
+			byte[] out = SecurityUtils.serialize(request);
+			if (encrypted) {
+				out = SecurityUtils.encrypt(key, IV, out);
 			}
-			return response;
+			outputStream.writeInt(out.length);
+			if (out.length > 0) {
+				outputStream.write(out, 0, out.length);
+			}
+			int len = inStream.readInt();
+			byte[] data = new byte[len];
+			if (len > 0) {
+				inStream.readFully(data);
+			}
+			if (encrypted) {
+				data = SecurityUtils.decrypt(key, IV, data);
+			}
+			response = (Response) SecurityUtils.deserialize(data);
 		} catch (IOException e) {
+			running = false;
 			return new MessageResponse("Could not write to Host \"" + host
 					+ "\" on port " + port);
 		} catch (ClassNotFoundException e) {
@@ -90,24 +102,7 @@ public class SingleServerSocketCommunication {
 			if (!running)
 				close();
 		}
-	}
-
-	/**
-	 * Kills this process needs to get called
-	 * 
-	 * @post the process is dead
-	 */
-	public void close() {
-		running = false;
-		try {
-			if (socket != null && !socket.isClosed()) {
-				if (outputStream != null)
-					outputStream.writeObject(null);
-				socket.close();
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		return response;
 	}
 
 	/**
@@ -123,5 +118,53 @@ public class SingleServerSocketCommunication {
 	public void holdConnectionOpen() throws IOException {
 		running = true;
 		connect();
+	}
+
+	@Override
+	public void setKey(byte[] key) {
+		this.key = key;
+	}
+
+	@Override
+	public void setIV(byte[] iV) {
+		this.IV = iV;
+	}
+
+	@Override
+	public void activateSecureConnection() {
+		encrypted = true;
+	}
+
+	@Override
+	public void deactivateSecureConnection() {
+		encrypted = false;
+	}
+
+	/**
+	 * Kills this process needs to get called
+	 * 
+	 * @post the process is dead
+	 */
+	public void close() {
+		try {
+			if (socket != null && !socket.isClosed()) {
+				if (outputStream != null)
+					outputStream.write(0);
+				socket.close();
+			}
+		} catch (IOException e) {
+			//It was already closed so it threw an error
+			//e.printStackTrace();
+		}
+	}
+
+	/**
+	 * Return the status of the connection
+	 * 
+	 * @return the status of the connection
+	 */
+	public boolean isActive() {
+		return !socket.isClosed() && !socket.isInputShutdown()
+				&& !socket.isOutputShutdown() && running;
 	}
 }

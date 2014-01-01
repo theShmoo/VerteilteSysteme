@@ -1,0 +1,38 @@
+%Testing the read anbd write Quorum with up and downloads
+*	startProxy proxy
+*	startClient client
+*	startFileServer fs1
+*	startFileServer fs2
+*	startFileServer fs3
+*	startFileServer fs4
+
+client:		!login alice 12345
+client:		!credits
+proxy:		!users
+fs1:		!list
+fs2:		!list
+fs3:		!list
+fs4:		!list
+client: 	!upload upload.txt
+proxy:		!fileservers
+fs1:		!list
+fs2:		!list
+fs3:		!list
+fs4:		!list
+client: 	!upload upload.txt
+proxy:		!fileservers
+fs1:		!list
+fs2:		!list
+fs3:		!list
+fs4:		!list
+client: 	!download upload.txt
+proxy:		!fileservers
+client: 	!download upload.txt
+proxy:		!fileservers
+
+proxy:	!exit
+client:	!exit
+fs1:	!exit
+fs2:	!exit
+fs3:	!exit
+fs4:	!exit

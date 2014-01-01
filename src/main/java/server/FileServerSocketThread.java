@@ -23,7 +23,7 @@ import model.RequestTO;
 import proxy.Proxy;
 import util.ChecksumUtils;
 import util.FileUtils;
-import util.SocketThread;
+import util.TCPChannel;
 import util.UnexpectedCloseException;
 import client.Client;
 
@@ -32,7 +32,7 @@ import client.Client;
  * 
  * @author David
  */
-public class FileServerSocketThread extends SocketThread implements IFileServer {
+public class FileServerSocketThread extends TCPChannel implements IFileServer {
 
 	private FileServer server;
 

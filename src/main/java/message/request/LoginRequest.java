@@ -3,38 +3,25 @@ package message.request;
 import message.Request;
 
 /**
- * Authenticates the client with the provided username and password.
- * <p/>
- * <b>Request</b>:<br/>
- * {@code !login &lt;username&gt; &lt;password&gt;}<br/>
- * <b>Response:</b><br/>
- * {@code !login success}<br/>
- * or<br/>
- * {@code !login wrong_credentials}
+ * Message 1 from the client for the authentication.
  *
  * @see message.response.LoginResponse
  */
 public class LoginRequest implements Request {
 	private static final long serialVersionUID = -1596776158259072949L;
 
-	private final String username;
-	private final String password;
+	private final byte[] message;
 
-	public LoginRequest(String username, String password) {
-		this.username = username;
-		this.password = password;
+	public LoginRequest(byte[] message) {
+		this.message = message;
 	}
 
-	public String getUsername() {
-		return username;
-	}
-
-	public String getPassword() {
-		return password;
+	public byte[] getMessage() {
+		return message;
 	}
 
 	@Override
 	public String toString() {
-		return String.format("!login %s %s", getUsername(), getPassword());
+		return String.format("%s", getMessage());
 	}
 }

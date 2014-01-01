@@ -2,6 +2,11 @@ package client;
 
 import java.io.File;
 import java.io.IOException;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
@@ -25,6 +30,7 @@ import model.RequestType;
 import org.bouncycastle.util.encoders.Base64;
 
 import proxy.Proxy;
+import proxy.RMI;
 import server.FileServer;
 import util.Config;
 import util.FileUtils;
@@ -59,6 +65,9 @@ public class Client implements IClient, Runnable {
 	private byte[] clientChallenge;
 	private byte[] secretKey;
 	private byte[] IV;
+	
+	// RMI
+	private RMI rmi = null;
 
 	/**
 	 * Create a new Client with the given {@link Shell} for its commands
@@ -89,6 +98,21 @@ public class Client implements IClient, Runnable {
 				proxyHost);
 		this.files = new ArrayList<FileInfo>();
 		updateFiles();
+		
+		//RMI
+		Config configRMI = new Config("mc");
+		String rmiHost = configRMI.getString("proxy.host");
+		int rmiPort = configRMI.getInt("proxy.rmi.port");
+		String rmiBindingName = configRMI.getString("binding.name");
+		try {
+			Registry registry = LocateRegistry.getRegistry(rmiHost, rmiPort);
+			rmi = (RMI)registry.lookup(rmiBindingName);
+			UnicastRemoteObject.exportObject(rmi, 0);
+		} catch (RemoteException e) {
+			e.printStackTrace();
+		} catch (NotBoundException e) {
+			e.printStackTrace();
+		}
 	}
 
 	private void getClientData(Config config) {
@@ -418,5 +442,12 @@ public class Client implements IClient, Runnable {
 	 */
 	public void logout() {
 		clientThread.deactivateSecureConnection();
+	}
+	
+	/**
+	 * @return the rmi
+	 */
+	public RMI getRmi() {
+		return rmi;
 	}
 }

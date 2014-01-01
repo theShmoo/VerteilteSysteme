@@ -138,6 +138,7 @@ public class Proxy implements Runnable {
 
 		this.proxyTcpHandlers = new ArrayList<ProxyTCPChannel>();
 		// this.fileVersionMap = new ConcurrentHashMap<String, Integer>();
+
 	}
 
 	/**

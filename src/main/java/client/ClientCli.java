@@ -1,6 +1,7 @@
 package client;
 
 import java.io.IOException;
+import java.rmi.RemoteException;
 import java.util.List;
 
 import message.Response;
@@ -10,9 +11,7 @@ import message.request.DownloadTicketRequest;
 import message.request.ListRequest;
 import message.request.LoginRequest;
 import message.request.LogoutRequest;
-import message.request.ReadQuorumRequest;
 import message.request.UploadRequest;
-import message.request.WriteQuorumRequest;
 import message.response.DownloadTicketResponse;
 import message.response.LoginResponse;
 import message.response.LoginResponse.Type;
@@ -193,17 +192,21 @@ public class ClientCli implements IClientCli {
 	}
 	
 	@Command 
-	public Response readQuorum() {
-		RequestTO request = new RequestTO(new ReadQuorumRequest(), RequestType.ReadQuorum);
-		MessageResponse response = (MessageResponse) client.send(request);
-		return response;
+	public Response readQuorum() throws RemoteException {
+//		RequestTO request = new RequestTO(new ReadQuorumRequest(), RequestType.ReadQuorum);
+//		MessageResponse response = (MessageResponse) client.send(request);
+//		return response;
+		//TODO
+		return client.getRmi().readQuorum();
 	}
 	
 	@Command
-	public Response writeQuorum() {
-		RequestTO request = new RequestTO(new WriteQuorumRequest(), RequestType.WriteQuorum);
-		MessageResponse response = (MessageResponse) client.send(request);
-		return response;
+	public Response writeQuorum() throws RemoteException {
+//		RequestTO request = new RequestTO(new WriteQuorumRequest(), RequestType.WriteQuorum);
+//		MessageResponse response = (MessageResponse) client.send(request);
+//		return response;
+		//TODO delete in requestTO & threads the methods
+		return client.getRmi().writeQuorum();
 	}
 
 	/*

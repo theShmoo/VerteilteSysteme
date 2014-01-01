@@ -68,4 +68,8 @@
 	</target>
 
 	<target name="rebuild" depends="clean, compile" description="Clean and build products." />
+
+	<target name="rmic">
+		<rmic classname="proxy.RMI" base="." classpathref="project.classpath" />
+	</target>
 </project>

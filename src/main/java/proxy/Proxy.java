@@ -727,7 +727,7 @@ public class Proxy implements Runnable {
 							request.getFilename());
 				}
 			}
-		} 
+		}
 		currentVersion++;
 
 		// add file to servers from nw quorum list

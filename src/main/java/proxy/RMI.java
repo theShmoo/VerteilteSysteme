@@ -3,7 +3,6 @@
  */
 package proxy;
 
-import java.rmi.RMISecurityManager;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -18,38 +17,14 @@ import util.Config;
  */
 public class RMI extends UnicastRemoteObject implements IRMI {
 
-	private static final long serialVersionUID = 1L;
-
-	public RMI() throws RemoteException {
+	/**
+	 * @throws RemoteException
+	 */
+	protected RMI() throws RemoteException {
 		super();
 	}
 
-	public static void main(String[] args) {
-		
-		//set SecurityManager
-		if (System.getSecurityManager() == null) {
-			System.setSecurityManager(new RMISecurityManager());
-		}
-		
-		Config rmiConfig = new Config("mc");
-		int rmiPort = rmiConfig.getInt("proxy.rmi.port");
-		String rmiHost = rmiConfig.getString("proxy.host");
-		Registry registry = null;
-
-		try {
-			registry = LocateRegistry.createRegistry(rmiPort);
-			registry = LocateRegistry.getRegistry(rmiHost, rmiPort);
-		} catch (RemoteException ex) {
-			ex.printStackTrace();
-		}
-		
-		//register RemoteObject
-		try {
-			registry.rebind(rmiHost, new RMI());
-		} catch (RemoteException ex) {
-			ex.printStackTrace();
-		} 
-	}
+	private static final long serialVersionUID = 4392725810478654970L;
 
 	@Override
 	public Response readQuorum() throws RemoteException {

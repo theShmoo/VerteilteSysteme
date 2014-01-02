@@ -6,6 +6,11 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
@@ -88,8 +93,7 @@ public class Proxy implements Runnable {
 	private ServerSocket serverSocket;
 	private List<ProxyTCPChannel> proxyTcpHandlers;
 	private boolean running;
-	private boolean uploadChange;
-
+	
 	// Replication Parameters
 	private List<FileServerStatusInfo> serverList;
 
@@ -130,15 +134,27 @@ public class Proxy implements Runnable {
 		executor.execute(shell);
 
 		this.running = true;
-		this.uploadChange = false;
-
 		getProxyData(config);
 
 		createhMAC(key);
 
 		this.proxyTcpHandlers = new ArrayList<ProxyTCPChannel>();
-		// this.fileVersionMap = new ConcurrentHashMap<String, Integer>();
-
+		// this.fileVersionMap = new ConcurrentHashMap<String, Integer>();	
+		
+		//RMI
+				Config configRMI = new Config("mc");
+				String rmiHost = configRMI.getString("proxy.host");
+				int rmiPort = configRMI.getInt("proxy.rmi.port");
+				String rmiBindingName = configRMI.getString("binding.name");
+						        
+				try {
+					Registry registry = LocateRegistry.createRegistry(rmiPort);			        
+			        registry.rebind(rmiBindingName, new RMI());
+				} catch (RemoteException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+		        
 	}
 
 	/**

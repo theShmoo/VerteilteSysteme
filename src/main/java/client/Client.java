@@ -29,6 +29,7 @@ import model.RequestType;
 
 import org.bouncycastle.util.encoders.Base64;
 
+import proxy.IRMI;
 import proxy.Proxy;
 import proxy.RMI;
 import server.FileServer;
@@ -67,7 +68,7 @@ public class Client implements IClient, Runnable {
 	private byte[] IV;
 	
 	// RMI
-	private RMI rmi = null;
+	private IRMI rmi = null;
 
 	/**
 	 * Create a new Client with the given {@link Shell} for its commands
@@ -106,8 +107,8 @@ public class Client implements IClient, Runnable {
 		String rmiBindingName = configRMI.getString("binding.name");
 		try {
 			Registry registry = LocateRegistry.getRegistry(rmiHost, rmiPort);
-			rmi = (RMI)registry.lookup(rmiBindingName);
-			UnicastRemoteObject.exportObject(rmi, 0);
+			IRMI rmi = (IRMI) registry.lookup(rmiBindingName);
+			//UnicastRemoteObject.exportObject(rmi, 0);
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		} catch (NotBoundException e) {
@@ -447,7 +448,7 @@ public class Client implements IClient, Runnable {
 	/**
 	 * @return the rmi
 	 */
-	public RMI getRmi() {
+	public IRMI getRmi() {
 		return rmi;
 	}
 }

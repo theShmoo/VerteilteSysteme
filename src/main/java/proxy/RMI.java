@@ -52,12 +52,12 @@ public class RMI extends UnicastRemoteObject implements IRMI {
 	public Response topThreeDownloads() throws RemoteException {
 		HashMap<String, Integer> map = proxy.topThreeDownloads();
 		Set<String> set = map.keySet();
-		String response = "Top Three Downloads: /n";
+		String response = "Top Three Downloads:";
 
 		int count = 1;
 		while (set.iterator().hasNext()) {
 			String file = set.iterator().next();
-			response += count + ". " + file + " " + map.get(file);
+			response += "\n" + count + ". " + file + " " + map.get(file);
 			count++;
 		}
 		return new MessageResponse(response);

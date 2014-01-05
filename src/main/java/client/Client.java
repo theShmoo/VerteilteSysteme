@@ -6,7 +6,6 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.rmi.server.UnicastRemoteObject;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
@@ -31,7 +30,6 @@ import org.bouncycastle.util.encoders.Base64;
 
 import proxy.IRMI;
 import proxy.Proxy;
-import proxy.RMI;
 import server.FileServer;
 import util.Config;
 import util.FileUtils;

@@ -2,6 +2,7 @@ package client;
 
 import java.io.IOException;
 import java.rmi.RemoteException;
+import java.security.PublicKey;
 import java.util.List;
 
 import message.Response;
@@ -191,22 +192,84 @@ public class ClientCli implements IClientCli {
 		return response;
 	}
 	
+	/**
+	 * Returns the number of Read-Quorums that are currently used for the replication mechanism.
+	 * 
+	 * @return Response with the number of Read-Quorums
+	 * @throws RemoteException
+	 */
 	@Command 
 	public Response readQuorum() throws RemoteException {
-//		RequestTO request = new RequestTO(new ReadQuorumRequest(), RequestType.ReadQuorum);
-//		MessageResponse response = (MessageResponse) client.send(request);
-//		return response;
-		//TODO
 		return client.getRmi().readQuorum();
 	}
 	
+	/**
+	 * Returns the number of Write-Quorums that are currently used for the replication mechanism.
+	 * 
+	 * @return Response with the number of Write-Quorums
+	 * @throws RemoteException
+	 */
 	@Command
 	public Response writeQuorum() throws RemoteException {
-//		RequestTO request = new RequestTO(new WriteQuorumRequest(), RequestType.WriteQuorum);
-//		MessageResponse response = (MessageResponse) client.send(request);
-//		return response;
-		//TODO delete in requestTO & threads the methods
 		return client.getRmi().writeQuorum();
+	}
+	
+	/**
+	 * Returns a sorted list that contains the 3 files that got downloaded the most.
+	 * Where the first file in the list, represents the file that got downloaded the most.
+	 * 
+	 * @return A sorted list of Strings
+	 * @throws RemoteException
+	 */
+	@Command
+	public Response topThreeDownloads() throws RemoteException {
+		return client.getRmi().topThreeDownloads();
+	}
+	
+	/**
+	 * Subscribes for the given file.
+	 * 
+	 * @param filename name of the file
+	 * @param number number of times, how often the file should be downloaded
+	 * @return Response that the file was downloaded x times
+	 * @throws RemoteException
+	 */
+	@Command 
+	public Response subscribe(String filename, int number) throws RemoteException {
+		//TODO add callback object, so if logout or exit, that the method stops
+		return client.getRmi().subscribe(filename, number);
+	}
+	
+	/**
+	 * Returns the Proxy's public key.
+	 * 
+	 * @return Response with the Proxy's public key
+	 * @throws RemoteException
+	 */
+	@Command 
+	public Response getProxyPublicKey() throws RemoteException {
+		PublicKey key = client.getRmi().getProxyPublicKey();
+		if (key != null) {
+			client.storeProxyPublicKey(key);
+			return new MessageResponse("Successfully received public key of Proxy.");
+		} 
+		return new MessageResponse("Receiving public key of Proxy failed.");
+	}
+	
+	/**
+	 * Exchanges the user's public key with the Proxy.
+	 * 
+	 * @param username the name of the user
+	 * @return Response 
+	 * @throws RemoteException
+	 */
+	@Command
+	public Response setUserPublicKey(String username) throws RemoteException {
+		PublicKey publicKey = client.getUserPublicKey(username);
+		if (publicKey != null) {
+			return client.getRmi().setUserPublicKey(username, publicKey);
+		}
+		return new MessageResponse("Exchanging the user's public key failed.");
 	}
 
 	/*

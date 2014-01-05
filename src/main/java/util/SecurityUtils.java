@@ -5,6 +5,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -25,12 +26,11 @@ import javax.crypto.spec.SecretKeySpec;
 import javax.security.auth.login.LoginException;
 
 import org.bouncycastle.openssl.PEMReader;
+import org.bouncycastle.openssl.PEMWriter;
 import org.bouncycastle.openssl.PasswordFinder;
 
 /**
  * Utilities for Security Tasks
- * 
- * @author David
  */
 public class SecurityUtils {
 	/**
@@ -79,11 +79,11 @@ public class SecurityUtils {
 		try {
 			in = new PEMReader(new FileReader(pathToPrivateKey),
 					new PasswordFinder() {
-						@Override
-						public char[] getPassword() {
-							return password.toCharArray();
-						}
-					});
+				@Override
+				public char[] getPassword() {
+					return password.toCharArray();
+				}
+			});
 			KeyPair keyPair = (KeyPair) in.readObject();
 			privateKey = keyPair.getPrivate();
 		} catch (FileNotFoundException e) {
@@ -164,7 +164,7 @@ public class SecurityUtils {
 		}
 		return encryptedMessage;
 	}
-	
+
 	/**
 	 * Encrypt the base64 message with the key with the AES algorithm
 	 * 
@@ -179,8 +179,8 @@ public class SecurityUtils {
 		try {
 			Cipher cipher = Cipher.getInstance("AES/CTR/NoPadding");
 			SecretKeySpec secret = new SecretKeySpec(key, "AES");
-		    cipher.init(Cipher.ENCRYPT_MODE, secret,new IvParameterSpec(IV));
-		    decryptedMessage = cipher.doFinal(data);
+			cipher.init(Cipher.ENCRYPT_MODE, secret,new IvParameterSpec(IV));
+			decryptedMessage = cipher.doFinal(data);
 		} catch (NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -200,10 +200,10 @@ public class SecurityUtils {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-	    
-	    return decryptedMessage;
+
+		return decryptedMessage;
 	}
-	
+
 	/**
 	 * Decrypt the base64 message with the key
 	 * 
@@ -240,7 +240,7 @@ public class SecurityUtils {
 		}
 		return decryptedMessage;
 	}
-	
+
 	/**
 	 * Decrypt the base64 message with the key with the AES algorithm
 	 * 
@@ -255,8 +255,8 @@ public class SecurityUtils {
 		try {
 			Cipher cipher = Cipher.getInstance("AES/CTR/NoPadding");
 			SecretKeySpec secret = new SecretKeySpec(key, "AES");
-		    cipher.init(Cipher.DECRYPT_MODE, secret,new IvParameterSpec(IV));
-		    decryptedMessage = cipher.doFinal(data);
+			cipher.init(Cipher.DECRYPT_MODE, secret,new IvParameterSpec(IV));
+			decryptedMessage = cipher.doFinal(data);
 		} catch (NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -276,10 +276,10 @@ public class SecurityUtils {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-	    
-	    return decryptedMessage;
+
+		return decryptedMessage;
 	}
-	
+
 	/**
 	 * Converts an object to a byte array and encodes it with Base 64
 	 * 
@@ -288,13 +288,13 @@ public class SecurityUtils {
 	 * @throws IOException
 	 */
 	public static byte[] serialize(Object obj) throws IOException {
-	    ByteArrayOutputStream out = new ByteArrayOutputStream();
-	    ObjectOutputStream os = new ObjectOutputStream(out);
-	    os.writeObject(obj);
-	    byte[] byteArray = out.toByteArray();
-	    return byteArray;
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		ObjectOutputStream os = new ObjectOutputStream(out);
+		os.writeObject(obj);
+		byte[] byteArray = out.toByteArray();
+		return byteArray;
 	}
-	
+
 	/**
 	 * Converts a byte array to an object
 	 * 
@@ -305,13 +305,41 @@ public class SecurityUtils {
 	 * @throws ClassNotFoundException
 	 */
 	public static Object deserialize(byte[] data) throws IOException, ClassNotFoundException {
-	    ByteArrayInputStream in = new ByteArrayInputStream(data);
-	    ObjectInputStream is = new ObjectInputStream(in);
-	    try{
-	    	return is.readObject();
-	    } catch (EOFException e){
-	    	// thats ok! 
-	    }
+		ByteArrayInputStream in = new ByteArrayInputStream(data);
+		ObjectInputStream is = new ObjectInputStream(in);
+		try{
+			return is.readObject();
+		} catch (EOFException e){
+			// thats ok! 
+		}
 		return null;
+	}
+
+	/**
+	 * Stores the public key to the given directory 
+	 * 
+	 * @param publicKey the public key
+	 * @param pathToPublicKey the path, where the public key should be stored
+	 */
+	public static boolean storePublicKey(PublicKey publicKey, String pathToPublicKey) {
+		PEMWriter out = null;
+		
+		try {
+			out = new PEMWriter(new FileWriter(pathToPublicKey));
+			out.writeObject(publicKey);
+		} catch (IOException ioe) {
+			System.out.println("Exception while writing file " + ioe);
+			return false;
+		} finally {
+			// close the streams using close method
+			try {
+				if (out != null) {
+					out.close();
+				}
+			} catch (IOException ioe) {
+				System.out.println("Error while closing stream: " + ioe);
+			}
+		}
+		return true;
 	}
 }

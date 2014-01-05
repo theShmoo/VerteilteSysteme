@@ -18,6 +18,7 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -93,9 +94,12 @@ public class Proxy implements Runnable {
 	private ServerSocket serverSocket;
 	private List<ProxyTCPChannel> proxyTcpHandlers;
 	private boolean running;
-	
+
 	// Replication Parameters
 	private List<FileServerStatusInfo> serverList;
+
+	// DownloadMap
+	private HashMap<String, Integer> downloadMap;
 
 	/**
 	 * Initialize a new Proxy
@@ -140,21 +144,21 @@ public class Proxy implements Runnable {
 
 		this.proxyTcpHandlers = new ArrayList<ProxyTCPChannel>();
 		// this.fileVersionMap = new ConcurrentHashMap<String, Integer>();	
-		
+
 		//RMI
-				Config configRMI = new Config("mc");
-				String rmiHost = configRMI.getString("proxy.host");
-				int rmiPort = configRMI.getInt("proxy.rmi.port");
-				String rmiBindingName = configRMI.getString("binding.name");
-						        
-				try {
-					Registry registry = LocateRegistry.createRegistry(rmiPort);			        
-			        registry.rebind(rmiBindingName, new RMI());
-				} catch (RemoteException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-		        
+		Config configRMI = new Config("mc");
+		String rmiHost = configRMI.getString("proxy.host");
+		int rmiPort = configRMI.getInt("proxy.rmi.port");
+		String rmiBindingName = configRMI.getString("binding.name");
+
+		try {
+			Registry registry = LocateRegistry.createRegistry(rmiPort);			        
+			registry.rebind(rmiBindingName, new RMI(this));
+		} catch (RemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
 	}
 
 	/**
@@ -205,6 +209,7 @@ public class Proxy implements Runnable {
 				.synchronizedSet(new HashSet<FileServerStatusInfo>());
 		this.users = getUsers();
 		this.serverList = new ArrayList<FileServerStatusInfo>();
+		this.downloadMap = new HashMap<String, Integer>();
 	}
 
 	/**
@@ -227,9 +232,9 @@ public class Proxy implements Runnable {
 				users.add(new UserLoginInfo(username, password, credits));
 			} catch (NumberFormatException e) {
 				System.out
-						.println("The configutation of "
-								+ username
-								+ " of the configuration file \"user.properties\" is invalid! \n\r");
+				.println("The configutation of "
+						+ username
+						+ " of the configuration file \"user.properties\" is invalid! \n\r");
 				close();
 			}
 		}
@@ -568,14 +573,14 @@ public class Proxy implements Runnable {
 		Response response = sender.send(new RequestTO(
 				// Download Request
 				new DownloadFileRequest(
-				// needs a Ticket
+						// needs a Ticket
 						new DownloadTicket("proxy", file,
 								ChecksumUtils
 								// with a checksum
-										.generateChecksum("proxy", file,
-												version, size), serverSocket
+								.generateChecksum("proxy", file,
+										version, size), serverSocket
 										.getInetAddress(), tcpPort)),
-				RequestType.File));
+										RequestType.File));
 		if (response instanceof DownloadFileResponse) {
 			DownloadFileResponse download = (DownloadFileResponse) response;
 			return download.getContent();
@@ -881,8 +886,70 @@ public class Proxy implements Runnable {
 	 */
 	public PublicKey getUserPublicKey(String username) {
 		if(FileUtils.check(keyDir,username+".pub.pem")){
-			return SecurityUtils.readPublicKey(keyDir+"\\"+username+".pub.pem");
+			return SecurityUtils.readPublicKey(keyDir + "\\" + username + ".pub.pem");
 		}
 		return null;
+	}
+
+	/**
+	 * Returns the public key of the Proxy.
+	 * 
+	 * @return PublicKey of the Proxy.
+	 */
+	public PublicKey getProxyPublicKey() {
+		return SecurityUtils.readPublicKey(keyDir + "\\.proxy.pub.pem");
+	}
+
+	/**
+	 * Sets the public key of the user.
+	 * 
+	 * @param username name of the user
+	 * @param publicKey public key of the user
+	 * @return true, if the public key of the user was correctly stored, else false
+	 */
+	public boolean setUserPublicKey(String username, PublicKey publicKey) {
+		return SecurityUtils.storePublicKey(publicKey, keyDir + "\\" + username + "pub.pem");
+	}
+
+	/**
+	 * Return a Map of 3 files and the number of their downloads, which were downloaded the most.
+	 * 
+	 * @return a HashMap of String and Integer
+	 */
+	public HashMap<String, Integer> topThreeDownloads() {
+		HashMap<String, Integer> map = new HashMap<String, Integer>();
+		Set<String> set = downloadMap.keySet();
+
+		String file = set.iterator().next();
+		int top = downloadMap.get(file);
+		while (map.size() < 2) {
+			while (set.iterator().hasNext()) {
+				file = set.iterator().next();
+				int value = downloadMap.get(file);
+				if (value > top) {
+					top = value;
+				}
+			}
+			map.put(file, top);
+			set = downloadMap.keySet();
+			set.remove(file);
+			file = set.iterator().next();
+			top = downloadMap.get(file);
+		}
+		return map;
+	}
+
+	/**
+	 * Increases the number of downloads of the file
+	 * 
+	 * @param filename the name of the file
+	 */
+	public void increaseDownloadNumber(String filename) {
+		if (!downloadMap.containsKey(filename)) {
+			downloadMap.put(filename, 1);
+		} else {
+			int count = downloadMap.get(filename);
+			downloadMap.put(filename, count++);
+		}
 	}
 }

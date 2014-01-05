@@ -451,4 +451,23 @@ public class Client implements IClient, Runnable {
 	public IRMI getRmi() {
 		return rmi;
 	}
+	
+	/**
+	 * Stores the public key of the Proxy.
+	 * 
+	 * @param publicKey public key of the Proxy
+	 */
+	public void storeProxyPublicKey(PublicKey publicKey) {
+		SecurityUtils.storePublicKey(publicKey, keyDir + "\\.proxy.pub.pem");
+	}
+	
+	/**
+	 * Returns the public key of the user.
+	 * 
+	 * @param username name of the user
+	 * @return PublicKey
+	 */
+	public PublicKey getUserPublicKey(String username) {
+		return SecurityUtils.readPublicKey(keyDir+"\\" + username + "pub.pem");
+	}
 }

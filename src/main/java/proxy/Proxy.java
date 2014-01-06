@@ -6,11 +6,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
-import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.rmi.server.UnicastRemoteObject;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
@@ -147,16 +145,21 @@ public class Proxy implements Runnable {
 
 		//RMI
 		Config configRMI = new Config("mc");
-		String rmiHost = configRMI.getString("proxy.host");
 		int rmiPort = configRMI.getInt("proxy.rmi.port");
 		String rmiBindingName = configRMI.getString("binding.name");
 
+		Registry registry;
 		try {
-			Registry registry = LocateRegistry.createRegistry(rmiPort);			        
+			registry = LocateRegistry.getRegistry(rmiPort);
 			registry.rebind(rmiBindingName, new RMI(this));
 		} catch (RemoteException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			try {
+				registry = LocateRegistry.createRegistry(rmiPort);
+				registry.rebind(rmiBindingName, new RMI(this));
+			} catch (RemoteException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}			        
 		}
 
 	}
@@ -487,8 +490,6 @@ public class Proxy implements Runnable {
 	/**
 	 * Checks all fileservers if they are online.
 	 * 
-	 * XXX Maybe this should get synchronized but i think this could cause this
-	 * method to block too long.
 	 */
 	public void checkOnline() {
 		for (FileServerStatusInfo f : fileservers) {

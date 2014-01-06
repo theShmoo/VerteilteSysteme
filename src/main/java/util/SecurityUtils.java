@@ -145,7 +145,6 @@ public class SecurityUtils {
 					.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
 			crypt.init(Cipher.ENCRYPT_MODE, key);
 			encryptedMessage = crypt.doFinal(message);
-			// XXX Start tha fucking catch parteeeeeey!!!
 		} catch (NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -221,7 +220,6 @@ public class SecurityUtils {
 					.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
 			crypt.init(Cipher.DECRYPT_MODE, key);
 			decryptedMessage = crypt.doFinal(message);
-			// XXX Start tha fucking catch parteeeeeey!!!
 		} catch (NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

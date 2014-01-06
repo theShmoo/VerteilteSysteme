@@ -105,7 +105,7 @@ public class Client implements IClient, Runnable {
 		String rmiBindingName = configRMI.getString("binding.name");
 		try {
 			Registry registry = LocateRegistry.getRegistry(rmiHost, rmiPort);
-			IRMI rmi = (IRMI) registry.lookup(rmiBindingName);
+			rmi = (IRMI) registry.lookup(rmiBindingName);
 			//UnicastRemoteObject.exportObject(rmi, 0);
 		} catch (RemoteException e) {
 			e.printStackTrace();

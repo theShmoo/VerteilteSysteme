@@ -81,10 +81,7 @@ public class ProxyTCPChannel extends TCPChannel implements IProxy {
 				try{
 					input = receive();
 				} catch (UnexpectedCloseException e){
-					LOGINSTATUS = 0;
-					deactivateSecureConnection();
-					user = null;
-					response = new MessageResponse("ERROR!");
+					running = false;
 				}
 
 				if (!(input instanceof RequestTO)) {

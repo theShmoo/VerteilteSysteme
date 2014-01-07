@@ -898,7 +898,7 @@ public class Proxy implements Runnable {
 	 * @return PublicKey of the Proxy.
 	 */
 	public PublicKey getProxyPublicKey() {
-		return SecurityUtils.readPublicKey(keyDir + "\\.proxy.pub.pem");
+		return SecurityUtils.readPublicKey(keyDir + "\\proxy.pub.pem");
 	}
 
 	/**
@@ -909,7 +909,7 @@ public class Proxy implements Runnable {
 	 * @return true, if the public key of the user was correctly stored, else false
 	 */
 	public boolean setUserPublicKey(String username, PublicKey publicKey) {
-		return SecurityUtils.storePublicKey(publicKey, keyDir + "\\" + username + "pub.pem");
+		return SecurityUtils.storePublicKey(publicKey, keyDir + "\\" + username + ".pub.pem");
 	}
 
 	/**
@@ -921,21 +921,23 @@ public class Proxy implements Runnable {
 		HashMap<String, Integer> map = new HashMap<String, Integer>();
 		Set<String> set = downloadMap.keySet();
 
-		String file = set.iterator().next();
-		int top = downloadMap.get(file);
-		while (map.size() < 2) {
-			while (set.iterator().hasNext()) {
-				file = set.iterator().next();
-				int value = downloadMap.get(file);
-				if (value > top) {
-					top = value;
+		if (!set.isEmpty()) {
+			String file = set.iterator().next();
+			int top = downloadMap.get(file);
+			while (map.size() < 2) {
+				while (set.iterator().hasNext()) {
+					file = set.iterator().next();
+					int value = downloadMap.get(file);
+					if (value > top) {
+						top = value;
+					}
 				}
+				map.put(file, top);
+				set = downloadMap.keySet();
+				set.remove(file);
+				file = set.iterator().next();
+				top = downloadMap.get(file);
 			}
-			map.put(file, top);
-			set = downloadMap.keySet();
-			set.remove(file);
-			file = set.iterator().next();
-			top = downloadMap.get(file);
 		}
 		return map;
 	}

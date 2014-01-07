@@ -2,12 +2,12 @@ package proxy;
 
 import java.io.IOException;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 
 import javax.crypto.KeyGenerator;
@@ -48,8 +48,10 @@ public class ProxyTCPChannel extends TCPChannel implements IProxy {
 	private Proxy proxy;
 	private UserLoginInfo user;
 	
-	//Security
-	private int LOGINSTATUS;	
+	//TODO install Queue
+
+	// Security
+	private int LOGINSTATUS;
 	private byte[] proxyChallenge = new byte[32];
 	private String username;
 
@@ -77,13 +79,14 @@ public class ProxyTCPChannel extends TCPChannel implements IProxy {
 				Object input = null;
 				RequestTO request = null;
 				Response response = null;
-				
-				try{
+
+				try {
 					input = receive();
-				} catch (UnexpectedCloseException e){
+				} catch (UnexpectedCloseException e) {
 					running = false;
 				}
 
+				//TODO if(LOGINSTATUS == 2 && request.getType() !instanceof Login) { //put on queue!}
 				if (!(input instanceof RequestTO)) {
 					// major error
 				} else {
@@ -120,13 +123,13 @@ public class ProxyTCPChannel extends TCPChannel implements IProxy {
 						break;
 					}
 				}
-				
+
 				send(response);
-				
-				if(LOGINSTATUS == 1){
+
+				if (LOGINSTATUS == 1) {
 					activateSecureConnection();
 				}
-				if(LOGINSTATUS == 3){
+				if (LOGINSTATUS == 3) {
 					deactivateSecureConnection();
 					LOGINSTATUS = 0;
 				}
@@ -144,83 +147,88 @@ public class ProxyTCPChannel extends TCPChannel implements IProxy {
 
 	@Override
 	public LoginResponse login(LoginRequest request) throws IOException {
-		if (!userCheck()) {
-			switch (LOGINSTATUS) {
-			// Client Challenge
-			case 0:
-				byte[] encryptedMessage = Base64.decode(request.getMessage());
+		synchronized (this) {
+			if (!userCheck()) {
+				switch (LOGINSTATUS) {
+				// Client Challenge
+				case 0:
+					byte[] encryptedMessage = Base64.decode(request
+							.getMessage());
 
-				// Decrypt the message with the private key from the proxy
-				byte[] b64message = SecurityUtils.decrypt(
-						proxy.getPrivateKey(), encryptedMessage);
+					// Decrypt the message with the private key from the proxy
+					byte[] b64message = SecurityUtils.decrypt(
+							proxy.getPrivateKey(), encryptedMessage);
 
-				if (b64message != null) {
-					String s = new String(b64message);
-					String[] strs = s.split(" ");
-					username = strs[1];
-					byte[] clientChallenge = strs[2].getBytes();
+					if (b64message != null) {
+						String s = new String(b64message);
+						String[] strs = s.split(" ");
+						username = strs[1];
+						byte[] clientChallenge = strs[2].getBytes();
 
-					// get public key from user
-					PublicKey userPublicKey = proxy.getUserPublicKey(username);
-					if (userPublicKey == null) {
-						return new LoginResponse(Type.WRONG_CREDENTIALS);
+						// get public key from user
+						PublicKey userPublicKey = proxy
+								.getUserPublicKey(username);
+						if (userPublicKey == null) {
+							return new LoginResponse(Type.WRONG_CREDENTIALS);
+						}
+						// generate a 32 bit proxy challenge
+						SecureRandom secureRandom = new SecureRandom();
+						secureRandom.nextBytes(proxyChallenge);
+						final byte[] b64ProxyChallenge = Base64
+								.encode(proxyChallenge);
+
+						// generate 256 Bit AES secret Key
+						byte[] b64key256 = null;
+						try {
+							KeyGenerator generator = KeyGenerator
+									.getInstance("AES");
+							generator.init(256);
+							SecretKey key = generator.generateKey();
+							byte[] bKey = key.getEncoded();
+							b64key256 = Base64.encode(bKey);
+							setKey(bKey);
+						} catch (NoSuchAlgorithmException e) {
+							e.printStackTrace();
+						}
+
+						// generate 16 Byte initialization vector (IV)
+						final byte[] IV = new byte[16];
+						secureRandom.nextBytes(IV);
+						final byte[] b64IV = Base64.encode(IV);
+						setIV(IV);
+						// combine to one message:
+						String ok = "!ok";
+						String separator = " ";
+						byte[] sep = separator.getBytes();
+						byte[] message = SecurityUtils.combineByteArrays(
+								ok.getBytes(), sep, clientChallenge, sep,
+								b64ProxyChallenge, sep, b64key256, sep, b64IV);
+
+						byte[] encryptedRetourMessage = SecurityUtils.encrypt(
+								userPublicKey, message);
+						LOGINSTATUS = 1;
+						return new LoginResponse(
+								Base64.encode(encryptedRetourMessage));
 					}
-					// generate a 32 bit proxy challenge
-					SecureRandom secureRandom = new SecureRandom();
-					secureRandom.nextBytes(proxyChallenge);
-					final byte[] b64ProxyChallenge = Base64
-							.encode(proxyChallenge);
-
-					// generate 256 Bit AES secret Key
-					byte[] b64key256 = null;
-					try {
-						KeyGenerator generator = KeyGenerator
-								.getInstance("AES");
-						generator.init(256);
-						SecretKey key = generator.generateKey();
-						byte[] bKey = key.getEncoded();
-						b64key256 = Base64.encode(bKey);
-						setKey(bKey);
-					} catch (NoSuchAlgorithmException e) {
-						e.printStackTrace();
-					}
-
-					// generate 16 Byte initialization vector (IV)
-					final byte[] IV = new byte[16];
-					secureRandom.nextBytes(IV);
-					final byte[] b64IV = Base64.encode(IV);
-					setIV(IV);
-					// combine to one message:
-					String ok = "!ok";
-					String separator = " ";
-					byte[] sep = separator.getBytes();
-					byte[] message = SecurityUtils.combineByteArrays(
-							ok.getBytes(), sep, clientChallenge, sep,
-							b64ProxyChallenge, sep, b64key256, sep, b64IV);
-
-					byte[] encryptedRetourMessage = SecurityUtils.encrypt(
-							userPublicKey, message);
-					LOGINSTATUS = 1;
-					return new LoginResponse(Base64.encode(encryptedRetourMessage));
-				}
-				break;
-			case 1:
-				byte[] data = Base64.decode(request.getMessage());
-				if (Arrays.equals(data,proxyChallenge)) {
-					for (UserLoginInfo u : proxy.getUserLoginInfos()) {
-						if (u.getName().equals(username)) {
-							this.user = u;
-							u.setOnline();
-							LOGINSTATUS = 2;
-							return new LoginResponse(Type.SUCCESS);
+					break;
+				case 1:
+					byte[] data = Base64.decode(request.getMessage());
+					if (Arrays.equals(data, proxyChallenge)) {
+						for (UserLoginInfo u : proxy.getUserLoginInfos()) {
+							if (u.getName().equals(username)) {
+								this.user = u;
+								u.setOnline();
+								LOGINSTATUS = 2;
+								return new LoginResponse(Type.SUCCESS);
+							}
 						}
 					}
+					break;
 				}
-				break;
 			}
+			LOGINSTATUS = 0;
+			return new LoginResponse(Type.WRONG_CREDENTIALS);
 		}
-		LOGINSTATUS = 0;
-		return new LoginResponse(Type.WRONG_CREDENTIALS);
 	}
 
 	@Override
@@ -257,17 +265,18 @@ public class ProxyTCPChannel extends TCPChannel implements IProxy {
 	public Response download(DownloadTicketRequest request) throws IOException {
 		if (userCheck()) {
 			String filename = request.getFilename();
-			ArrayList<List<FileServerStatusInfo>> list = proxy.getGiffordsLists();
+			ArrayList<List<FileServerStatusInfo>> list = proxy
+					.getGiffordsLists();
 			List<FileServerStatusInfo> fnr = list.get(0);
-			
+
 			FileServerInfo server = null;
 			// case 1: there is no server
 			if (fnr.size() == 0) {
 				return new MessageResponse(
 						"We are sorry! There is currently no online file server! Try again later!");
-			} 
+			}
 			server = fnr.get(0).getModel();
-			
+
 			long size = 0l;
 			InfoResponse infoResponse = null;
 
@@ -294,7 +303,8 @@ public class ProxyTCPChannel extends TCPChannel implements IProxy {
 				return info;
 			}
 
-			//check, which server from the nrs has the highest version of the file
+			// check, which server from the nrs has the highest version of the
+			// file
 			int version = proxy.getVersion(server, filename);
 			long usage = server.getUsage();
 			for (int i = 1; i < fnr.size(); i++) {
@@ -302,12 +312,13 @@ public class ProxyTCPChannel extends TCPChannel implements IProxy {
 					version = proxy.getVersion(fnr.get(i).getModel(), filename);
 					server = fnr.get(i).getModel();
 					usage = server.getUsage();
-				} else if (version == proxy.getVersion(fnr.get(i).getModel(), filename) && usage > fnr.get(i).getUsage()) {
+				} else if (version == proxy.getVersion(fnr.get(i).getModel(),
+						filename) && usage > fnr.get(i).getUsage()) {
 					server = fnr.get(i).getModel();
 					usage = server.getUsage();
 				}
 			}
-			
+
 			String checksum = ChecksumUtils.generateChecksum(user.getName(),
 					filename, version, size);
 			DownloadTicket ticket = new DownloadTicket(user.getName(),
@@ -316,8 +327,8 @@ public class ProxyTCPChannel extends TCPChannel implements IProxy {
 			// everything worked well the user gets his ticket so we can rank
 			// the fileserver as working
 			proxy.addServerUsage(server, size);
-			
-			//add file to the download-list
+
+			// add file to the download-list
 			proxy.increaseDownloadNumber(filename);
 			return respond;
 		}

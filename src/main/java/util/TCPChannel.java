@@ -121,22 +121,22 @@ public abstract class TCPChannel implements Runnable, Channel, SecureChannel {
 	}
 	
 	@Override
-	public void setKey(byte[] key) {
+	public synchronized void setKey(byte[] key) {
 		this.key = key;
 	}
 	
 	@Override
-	public void setIV(byte[] iV) {
+	public synchronized void setIV(byte[] iV) {
 		this.IV = iV;
 	}
 	
 	@Override
-	public void activateSecureConnection() {
+	public synchronized void activateSecureConnection() {
 		encrypted = true;
 	}
 	
 	@Override
-	public void deactivateSecureConnection() {
+	public synchronized void deactivateSecureConnection() {
 		encrypted = false;
 	}
 

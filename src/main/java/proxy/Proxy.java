@@ -92,7 +92,7 @@ public class Proxy implements Runnable {
 	private ServerSocket serverSocket;
 	private List<ProxyTCPChannel> proxyTcpHandlers;
 	private boolean running;
-
+	
 	// Replication Parameters
 	private List<FileServerStatusInfo> serverList;
 
@@ -201,7 +201,7 @@ public class Proxy implements Runnable {
 			close();
 		} catch (LoginException e1) {
 			try {
-				shell.writeLine("The configuration file \"proxy.properties\" is invalid! \n\r");
+				shell.writeLine(e1.getMessage());
 			} catch (IOException e) {
 				e.printStackTrace();
 			}

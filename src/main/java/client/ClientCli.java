@@ -55,31 +55,36 @@ public class ClientCli implements IClientCli {
 	@Override
 	@Command
 	public LoginResponse login(String username, String password) {
-			if(login || !client.checkKey(username,password)){
+		synchronized (this) {
+			if (login || !client.checkKey(username, password)) {
 				return new LoginResponse(Type.WRONG_CREDENTIALS);
 			}
-			
+
 			byte[] ciphertext = client.getClientChallenge(username);
-			
-			if(ciphertext != null){			
+
+			if (ciphertext != null) {
 				LoginRequest data = new LoginRequest(ciphertext);
 				RequestTO request = new RequestTO(data, RequestType.Login);
 				Response response = client.send(request);
-				
+
 				if (response instanceof LoginResponse) {
 					LoginResponse r = (LoginResponse) response;
-					ciphertext = client.solveProxyChallenge(r.getProxyChallenge(),username,password);
-					if(ciphertext != null){
-						data = new LoginRequest(ciphertext);
-						request = new RequestTO(data, RequestType.Login);
-						response = client.send(request);
-						LoginResponse lresp = client.checkLogin(response);
-						login = lresp.getType() == Type.SUCCESS;
-						return lresp;
+					if(r.getType() != Type.WRONG_CREDENTIALS){
+						ciphertext = client.solveProxyChallenge(
+								r.getProxyChallenge(), username, password);
+						if (ciphertext != null) {
+							data = new LoginRequest(ciphertext);
+							request = new RequestTO(data, RequestType.Login);
+							response = client.send(request);
+							LoginResponse lresp = client.checkLogin(response);
+							login = lresp.getType() == Type.SUCCESS;
+							return lresp;
+						}
 					}
 				}
 			}
-			return new LoginResponse(Type.WRONG_CREDENTIALS); //XXX change!
+			return new LoginResponse(Type.WRONG_CREDENTIALS); // XXX change!
+		}
 	}
 
 	/*
@@ -191,20 +196,22 @@ public class ClientCli implements IClientCli {
 		client.logout();
 		return response;
 	}
-	
+
 	/**
-	 * Returns the number of Read-Quorums that are currently used for the replication mechanism.
+	 * Returns the number of Read-Quorums that are currently used for the
+	 * replication mechanism.
 	 * 
 	 * @return Response with the number of Read-Quorums
 	 * @throws RemoteException
 	 */
-	@Command 
+	@Command
 	public Response readQuorum() throws RemoteException {
 		return client.getRmi().readQuorum();
 	}
-	
+
 	/**
-	 * Returns the number of Write-Quorums that are currently used for the replication mechanism.
+	 * Returns the number of Write-Quorums that are currently used for the
+	 * replication mechanism.
 	 * 
 	 * @return Response with the number of Write-Quorums
 	 * @throws RemoteException
@@ -213,10 +220,11 @@ public class ClientCli implements IClientCli {
 	public Response writeQuorum() throws RemoteException {
 		return client.getRmi().writeQuorum();
 	}
-	
+
 	/**
-	 * Returns a sorted list that contains the 3 files that got downloaded the most.
-	 * Where the first file in the list, represents the file that got downloaded the most.
+	 * Returns a sorted list that contains the 3 files that got downloaded the
+	 * most. Where the first file in the list, represents the file that got
+	 * downloaded the most.
 	 * 
 	 * @return A sorted list of Strings
 	 * @throws RemoteException
@@ -225,42 +233,47 @@ public class ClientCli implements IClientCli {
 	public Response topThreeDownloads() throws RemoteException {
 		return client.getRmi().topThreeDownloads();
 	}
-	
+
 	/**
 	 * Subscribes for the given file.
 	 * 
-	 * @param filename name of the file
-	 * @param number number of times, how often the file should be downloaded
+	 * @param filename
+	 *            name of the file
+	 * @param number
+	 *            number of times, how often the file should be downloaded
 	 * @return Response that the file was downloaded x times
 	 * @throws RemoteException
 	 */
-	@Command 
-	public Response subscribe(String filename, int number) throws RemoteException {
-		//TODO add callback object, so if logout or exit, that the method stops
+	@Command
+	public Response subscribe(String filename, int number)
+			throws RemoteException {
+		// TODO add callback object, so if logout or exit, that the method stops
 		return client.getRmi().subscribe(filename, number);
 	}
-	
+
 	/**
 	 * Returns the Proxy's public key.
 	 * 
 	 * @return Response with the Proxy's public key
 	 * @throws RemoteException
 	 */
-	@Command 
+	@Command
 	public Response getProxyPublicKey() throws RemoteException {
 		PublicKey key = client.getRmi().getProxyPublicKey();
 		if (key != null) {
 			client.storeProxyPublicKey(key);
-			return new MessageResponse("Successfully received public key of Proxy.");
-		} 
+			return new MessageResponse(
+					"Successfully received public key of Proxy.");
+		}
 		return new MessageResponse("Receiving public key of Proxy failed.");
 	}
-	
+
 	/**
 	 * Exchanges the user's public key with the Proxy.
 	 * 
-	 * @param username the name of the user
-	 * @return Response 
+	 * @param username
+	 *            the name of the user
+	 * @return Response
 	 * @throws RemoteException
 	 */
 	@Command

@@ -456,7 +456,7 @@ public class Client implements IClient, Runnable {
 	 * @param publicKey public key of the Proxy
 	 */
 	public void storeProxyPublicKey(PublicKey publicKey) {
-		SecurityUtils.storePublicKey(publicKey, keyDir + "\\.proxy.pub.pem");
+		SecurityUtils.storePublicKey(publicKey, keyDir + "\\proxy.pub.pem");
 	}
 	
 	/**
@@ -466,6 +466,6 @@ public class Client implements IClient, Runnable {
 	 * @return PublicKey
 	 */
 	public PublicKey getUserPublicKey(String username) {
-		return SecurityUtils.readPublicKey(keyDir+"\\" + username + "pub.pem");
+		return SecurityUtils.readPublicKey(keyDir+"\\" + username + ".pub.pem");
 	}
 }

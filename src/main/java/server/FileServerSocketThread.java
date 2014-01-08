@@ -97,7 +97,7 @@ public class FileServerSocketThread extends TCPChannel implements IFileServer {
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (UnexpectedCloseException e) {
-			System.out.println("The connection to the partner is down!");
+			running = false;
 		} finally {
 			close();
 		}

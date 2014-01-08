@@ -63,8 +63,9 @@ public abstract class TCPChannel implements Runnable, Channel, SecureChannel {
 				close();
 			}
 		} catch (IOException e) {
-			if (running)
+			if (running){
 				throw new UnexpectedCloseException("Connection reset");
+			}
 		} catch (ClassNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

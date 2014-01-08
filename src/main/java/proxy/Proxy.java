@@ -6,9 +6,13 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
+import java.rmi.AccessException;
+import java.rmi.NoSuchObjectException;
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
@@ -98,7 +102,12 @@ public class Proxy implements Runnable {
 
 	// DownloadMap
 	private HashMap<String, Integer> downloadMap;
-
+	
+	//RMI
+	private IRMI rmi;
+	private Registry registry;
+	private String rmiBindingName;
+	
 	/**
 	 * Initialize a new Proxy
 	 */
@@ -146,22 +155,27 @@ public class Proxy implements Runnable {
 		//RMI
 		Config configRMI = new Config("mc");
 		int rmiPort = configRMI.getInt("proxy.rmi.port");
-		String rmiBindingName = configRMI.getString("binding.name");
+		rmiBindingName = configRMI.getString("binding.name");
 
-		Registry registry;
 		try {
 			registry = LocateRegistry.getRegistry(rmiPort);
-			registry.rebind(rmiBindingName, new RMI(this));
+			rmi = new RMI(this);
+			registry.rebind(rmiBindingName, rmi);
 		} catch (RemoteException e) {
 			try {
 				registry = LocateRegistry.createRegistry(rmiPort);
-				registry.rebind(rmiBindingName, new RMI(this));
+				rmi = new RMI(this);
+				registry.rebind(rmiBindingName, rmi);
 			} catch (RemoteException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
+				try { 
+					e.printStackTrace(); //XXX remove
+					shell.writeLine(e.getMessage());
+				} catch (IOException e2) {
+					// TODO Auto-generated catch block
+					e2.printStackTrace();
+				}
 			}			        
-		}
-
+		}			
 	}
 
 	/**
@@ -696,34 +710,6 @@ public class Proxy implements Runnable {
 	}
 
 	/**
-	 * Closes all Sockets and Streams
-	 */
-	public void close() {
-		running = false;
-		if (executor != null)
-			executor.shutdown();
-		if (udpHandler != null)
-			udpHandler.close();
-		if (fsChecker != null)
-			fsChecker.cancel();
-		for (ProxyTCPChannel t : proxyTcpHandlers) {
-			// t != null
-			t.close();
-		}
-		try {
-			if (serverSocket != null && !serverSocket.isClosed())
-				serverSocket.close();
-			System.in.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		if (executor != null)
-			executor.shutdownNow();
-		if (shell != null)
-			shell.close();
-	}
-
-	/**
 	 * 
 	 * @param request
 	 * @throws IOException
@@ -954,5 +940,48 @@ public class Proxy implements Runnable {
 			int count = downloadMap.get(filename);
 			downloadMap.put(filename, count++);
 		}
+	}
+	
+	/**
+	 * Closes all Sockets and Streams
+	 */
+	public void close() {
+		running = false;
+		//shut down RMI
+		try {
+			registry.unbind(rmiBindingName);
+			UnicastRemoteObject.unexportObject(rmi, true);
+		} catch (NoSuchObjectException e1) {
+			e1.printStackTrace();
+		} catch (AccessException e) {
+			e.printStackTrace();
+		} catch (RemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NotBoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		if (executor != null)
+			executor.shutdown();
+		if (udpHandler != null)
+			udpHandler.close();
+		if (fsChecker != null)
+			fsChecker.cancel();
+		for (ProxyTCPChannel t : proxyTcpHandlers) {
+			// t != null
+			t.close();
+		}
+		try {
+			if (serverSocket != null && !serverSocket.isClosed())
+				serverSocket.close();
+			System.in.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		if (executor != null)
+			executor.shutdownNow();
+		if (shell != null)
+			shell.close();
 	}
 }

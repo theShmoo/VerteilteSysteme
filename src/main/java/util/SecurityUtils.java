@@ -90,7 +90,9 @@ public class SecurityUtils {
 		} catch (FileNotFoundException e) {
 			throw new LoginException("The username is not registered!");
 		} catch (IOException ioe) {
+			ioe.printStackTrace();
 			throw new LoginException("The username or password is wrong!");
+			
 		} finally {
 			// close the streams using close method
 			try {

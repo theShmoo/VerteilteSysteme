@@ -60,8 +60,8 @@ public class TestComponent {
 		startProxy();
 		createClients(clients);
 		startFileServers();
-		uploadFiles(uploadsPerMin);
-		downloadFiles(downloadsPerMin);
+//		uploadFiles(uploadsPerMin);
+//		downloadFiles(downloadsPerMin);
 	}
 	
 	private void getTestComponentData(Config config) {
@@ -94,8 +94,8 @@ public class TestComponent {
 		int count = 1;
 		clientSet = new HashSet<ClientCli>();
 		while (count <= clients) {
-			clientSet.add(ComponentFactory.startClient(new Config("client"), new Shell()));
-			count++;
+//			clientSet.add(ComponentFactory.startClient(new Config("client"), new Shell()));
+//			count++;
 		}
 	}
 	

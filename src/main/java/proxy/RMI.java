@@ -4,16 +4,14 @@
 package proxy;
 
 import java.rmi.RemoteException;
-import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
 import java.security.PublicKey;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.Set;
 
-import client.SubscribeService;
 import message.Response;
 import message.response.MessageResponse;
+import client.SubscribeService;
 
 /**
  * 
@@ -68,22 +66,20 @@ public class RMI extends UnicastRemoteObject implements IRMI {
 	 */
 	@Override
 	public Response topThreeDownloads() throws RemoteException {
-		HashMap<String, Integer> map = proxy.topThreeDownloads();
+		LinkedHashMap<String, Integer> map = proxy.topThreeDownloads();
 
 		if (!map.isEmpty()) {
-			Set<String> set = new LinkedHashSet<String>();
-			set.addAll(map.keySet());
+			Set<String> set = map.keySet();
 			String response = "Top Three Downloads:";
 
 			int count = 1;
-			while (set.iterator().hasNext()) {
-				String file = set.iterator().next();
-				response += "\n" + count + ". " + file + " " + map.get(file);
+			for (String s : set) {
+				response += "\n" + count + ". " + s + " " + map.get(s);
 				count++;
 			}
 			return new MessageResponse(response);
 		}
-		return new MessageResponse("Files have not yet been downloaded.");
+		return new MessageResponse("Enough files have not yet been downloaded.");
 	}
 
 	/*

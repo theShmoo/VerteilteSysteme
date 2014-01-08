@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -936,25 +937,27 @@ public class Proxy implements Runnable {
 	 * 
 	 * @return a HashMap of String and Integer
 	 */
-	public HashMap<String, Integer> topThreeDownloads() {
-		HashMap<String, Integer> map = new HashMap<String, Integer>();
+	public LinkedHashMap<String, Integer> topThreeDownloads() {
+		LinkedHashMap<String, Integer> map = new LinkedHashMap<String, Integer>();
 		Set<String> set = new LinkedHashSet<String>();
 		set.addAll(downloadMap.keySet());
 
 		if (!set.isEmpty()) {
 			String file = set.iterator().next();
 			int top = downloadMap.get(file);
-			while (map.size() < 2) {
-				while (set.iterator().hasNext()) {
-					file = set.iterator().next();
-					int value = downloadMap.get(file);
+			while (map.size() < 3) {
+				for (String s : set) {
+					int value = downloadMap.get(s);
 					if (value > top) {
 						top = value;
+						file = s;
 					}
 				}
 				map.put(file, top);
-				set = downloadMap.keySet();
 				set.remove(file);
+				if (set.size() == 0) {
+					return map;
+				}
 				file = set.iterator().next();
 				top = downloadMap.get(file);
 			}
@@ -972,14 +975,13 @@ public class Proxy implements Runnable {
 			downloadMap.put(filename, 1);
 		} else {
 			int count = downloadMap.get(filename);
-			downloadMap.put(filename, count++);
+			downloadMap.put(filename, ++count);
 		}
 		for(SubscribeModel m : subscribeList){
 			if(m.getFileName().equals(filename)){
 				m.addDownload();
 			}
 		}
-		
 	}
 	
 	/**

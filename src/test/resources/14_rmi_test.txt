@@ -1,0 +1,40 @@
+%Testing the rmi commands
+*	startProxy proxy
+*	startClient client
+*	startClient client1
+*	startFileServer fs1
+*	startFileServer fs2
+*	startFileServer fs3
+*	startFileServer fs4
+
+client:		!login alice 12345
+client1:	!login bill 23456
+
+client:		!buy 100000
+client1:	!buy 100000
+
+client:		!getProxyPublicKey
+client1:	!setUserPublicKey bill
+
+client:		!subscribe upload.txt 4
+client1:	!download upload.txt
+client1:	!download upload.txt
+client1:	!download long.txt
+client1:	!subscribe data.txt 1
+client:		!download long.txt
+client:		!download data.txt
+client1:	!download upload.txt
+client1:	!download upload.txt
+
+client:		!topThreeDownloads
+client:		!readQuorum
+client:		!writeQuorum
+
+
+proxy:		!exit
+client:		!exit
+client1:	!exit
+fs1:		!exit
+fs2:		!exit
+fs3:		!exit
+fs4:		!exit

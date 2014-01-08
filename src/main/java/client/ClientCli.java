@@ -2,7 +2,6 @@ package client;
 
 import java.io.IOException;
 import java.rmi.RemoteException;
-import java.rmi.server.UnicastRemoteObject;
 import java.security.PublicKey;
 import java.util.List;
 

@@ -1,13 +1,13 @@
 package server;
 
+import java.io.IOException;
+
 import message.Response;
-import message.request.DownloadFileRequest;
 import message.request.InfoRequest;
 import message.request.UploadRequest;
 import message.request.VersionRequest;
-import message.response.*;
-
-import java.io.IOException;
+import message.response.MessageResponse;
+import model.DownloadFileRequest;
 
 /**
  * This interface defines the functionality for the file server.

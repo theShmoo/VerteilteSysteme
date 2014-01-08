@@ -70,7 +70,7 @@ public class TestComponent {
 		userList = new ArrayList<String>();
 		userList.add("alice");
 		userList.add("bill");
-		users = new HashMap<>();
+		//users = new HashMap<>();
 		users.put("alice", "12345");
 		users.put("bill", "23456");
 

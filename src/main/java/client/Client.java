@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.rmi.AccessException;
 import java.rmi.NoSuchObjectException;
 import java.rmi.NotBoundException;
-import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -20,22 +19,20 @@ import javax.security.auth.login.LoginException;
 
 import message.Request;
 import message.Response;
-import message.request.DownloadFileRequest;
 import message.response.DownloadFileResponse;
 import message.response.LoginResponse;
 import message.response.LoginResponse.Type;
 import message.response.MessageResponse;
+import model.DownloadFileRequest;
 import model.DownloadTicket;
 import model.FileInfo;
 import model.RequestTO;
-import model.RequestType;
 
 import org.bouncycastle.util.encoders.Base64;
 
 import proxy.IRMI;
 import proxy.Proxy;
 import server.FileServer;
-import sun.rmi.server.UnicastServerRef;
 import util.Config;
 import util.FileUtils;
 import util.SecurityUtils;
@@ -116,9 +113,19 @@ public class Client implements IClient, Runnable {
 			registry = LocateRegistry.getRegistry(rmiHost, rmiPort);
 			rmi = (IRMI) registry.lookup(rmiBindingName);
 		} catch (RemoteException e) {
-			e.printStackTrace();
+			try {
+				shell.writeLine(e.getMessage());
+			} catch (IOException e1) {
+				System.out.println(e.getMessage());
+			}
+			exit();
 		} catch (NotBoundException e) {
-			e.printStackTrace();
+			try {
+				shell.writeLine(e.getMessage());
+			} catch (IOException e1) {
+				System.out.println(e.getMessage());
+			}
+			exit();
 		}
 	}
 
@@ -134,11 +141,14 @@ public class Client implements IClient, Runnable {
 		} catch (NumberFormatException e) {
 			System.out
 					.println("The configuration file \"client.properties\" is invalid! \n\r");
-			e.printStackTrace();
 			try {
 				clientCli.exit();
 			} catch (IOException e1) {
-				e1.printStackTrace();
+				try {
+					shell.writeLine(e1.getMessage());
+				} catch (IOException e2) {
+					System.out.println(e1.getMessage());
+				};
 			}
 		}
 	}
@@ -486,20 +496,10 @@ public class Client implements IClient, Runnable {
 	 * Closes all Threads and shuts down the client
 	 */
 	public void exit() {
-		try {
-			registry.unbind(rmiBindingName);
-			UnicastRemoteObject.unexportObject(rmi, true);
-		} catch (NoSuchObjectException e1) {
-			e1.printStackTrace();
-		} catch (AccessException e) {
-			e.printStackTrace();
-		} catch (RemoteException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (NotBoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+			try {
+				registry.unbind(rmiBindingName);
+				UnicastRemoteObject.unexportObject(rmi, true);
+			} catch (RemoteException | NotBoundException e1) { /* -.- */ }
 		if (clientThread != null)
 			clientThread.close();
 		try {

@@ -19,16 +19,10 @@ public class DownloadFileResponse implements Response {
 	private static final long serialVersionUID = 5457101636243702226L;
 	private static final Charset CHARSET = Charset.forName("ISO-8859-1");
 
-	private final DownloadTicket ticket;
 	private final byte[] content;
 
-	public DownloadFileResponse(DownloadTicket ticket, byte[] content) {
-		this.ticket = ticket;
+	public DownloadFileResponse(byte[] content) {
 		this.content = content;
-	}
-
-	public DownloadTicket getTicket() {
-		return ticket;
 	}
 
 	public byte[] getContent() {

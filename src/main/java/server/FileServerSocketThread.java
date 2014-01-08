@@ -122,7 +122,7 @@ public class FileServerSocketThread extends TCPChannel implements IFileServer {
 	public Response download(DownloadFileRequest request) throws IOException {
 			byte[] content = FileUtils.read(server.getPath(),
 					request.getFilename());
-			return new DownloadFileResponse(new DownloadTicket(), content);
+			return new DownloadFileResponse(content);
 	}
 
 	@Override

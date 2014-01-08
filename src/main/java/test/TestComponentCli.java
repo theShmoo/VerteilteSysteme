@@ -24,8 +24,4 @@ public class TestComponentCli {
 		return null;
 	}
 	
-	@Command 
-	public Response list() {
-		return testComponent.list();
-	}
 }

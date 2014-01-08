@@ -49,7 +49,7 @@ public class ProxyTCPChannel extends TCPChannel implements IProxy {
 
 	private Proxy proxy;
 	private UserLoginInfo user;
-	
+
 	//TODO install Queue
 
 	// Security
@@ -97,7 +97,7 @@ public class ProxyTCPChannel extends TCPChannel implements IProxy {
 					switch (request.getType()) {
 					case Login:
 						LoginRequest loginRequest = (LoginRequest) request
-								.getRequest();
+						.getRequest();
 						response = login(loginRequest);
 						break;
 					case Logout:
@@ -269,57 +269,58 @@ public class ProxyTCPChannel extends TCPChannel implements IProxy {
 			String filename = request.getFilename();
 			ArrayList<List<FileServerStatusInfo>> list = proxy
 					.getGiffordsLists();
-			List<FileServerStatusInfo> fnr = list.get(0);
+			if (list != null) {
+				List<FileServerStatusInfo> fnr = list.get(0);
 
-			FileServerInfo server = null;
-			// case 1: there is no server
-			if (fnr.size() == 0) {
-				return new MessageResponse(
-						"We are sorry! There is currently no online file server! Try again later!");
-			}
-			server = fnr.get(0).getModel();
-
-			long size = 0l;
-			InfoResponse infoResponse = null;
-
-			Response info = proxy.getFileInfo(server, filename);
-			// case 2: server exists and returns a valid info of the file
-			if (info instanceof InfoResponse) {
-				infoResponse = (InfoResponse) info;
-				size = infoResponse.getSize();
-				// case 3: user has enough Credits! everything is fine!
-				if (user.hasEnoughCredits(size)) {
-					user.removeCredits(size);
-					// case 4: the user does not have enough credits
-				} else {
+				FileServerInfo server = null;
+				// case 1: there is no server
+				if (fnr.size() == 0) {
 					return new MessageResponse(
-							"Sry! You have too less credits!\nYou have "
-									+ user.getCredits()
-									+ " credits and you need " + size
-									+ " credits! To buy credits type: \"!buy "
-									+ (size - user.getCredits()) + "\"");
+							"We are sorry! There is currently no online file server! Try again later!");
 				}
-				// case 5: The server exists but does not return a valid info
-				// (maybe file does not exist)
-			} else {
-				return info;
-			}
+				server = fnr.get(0).getModel();
 
-			// check, which server from the nrs has the highest version of the
-			// file
-			int version = proxy.getVersion(server, filename);
-			long usage = server.getUsage();
-			for (int i = 1; i < fnr.size(); i++) {
-				if (version < proxy.getVersion(fnr.get(i).getModel(), filename)) {
-					version = proxy.getVersion(fnr.get(i).getModel(), filename);
-					server = fnr.get(i).getModel();
-					usage = server.getUsage();
-				} else if (version == proxy.getVersion(fnr.get(i).getModel(),
-						filename) && usage > fnr.get(i).getUsage()) {
-					server = fnr.get(i).getModel();
-					usage = server.getUsage();
+				long size = 0l;
+				InfoResponse infoResponse = null;
+
+				Response info = proxy.getFileInfo(server, filename);
+				// case 2: server exists and returns a valid info of the file
+				if (info instanceof InfoResponse) {
+					infoResponse = (InfoResponse) info;
+					size = infoResponse.getSize();
+					// case 3: user has enough Credits! everything is fine!
+					if (user.hasEnoughCredits(size)) {
+						user.removeCredits(size);
+						// case 4: the user does not have enough credits
+					} else {
+						return new MessageResponse(
+								"Sry! You have too less credits!\nYou have "
+										+ user.getCredits()
+										+ " credits and you need " + size
+										+ " credits! To buy credits type: \"!buy "
+										+ (size - user.getCredits()) + "\"");
+					}
+					// case 5: The server exists but does not return a valid info
+					// (maybe file does not exist)
+				} else {
+					return info;
 				}
-			}
+
+				// check, which server from the nrs has the highest version of the
+				// file
+				int version = proxy.getVersion(server, filename);
+				long usage = server.getUsage();
+				for (int i = 1; i < fnr.size(); i++) {
+					if (version < proxy.getVersion(fnr.get(i).getModel(), filename)) {
+						version = proxy.getVersion(fnr.get(i).getModel(), filename);
+						server = fnr.get(i).getModel();
+						usage = server.getUsage();
+					} else if (version == proxy.getVersion(fnr.get(i).getModel(),
+							filename) && usage > fnr.get(i).getUsage()) {
+						server = fnr.get(i).getModel();
+						usage = server.getUsage();
+					}
+				}
 
 			// generate infos
 			RequestTO di = new RequestTO(new DownloadFileRequest(server.getPort(),filename),RequestType.File);
@@ -333,6 +334,8 @@ public class ProxyTCPChannel extends TCPChannel implements IProxy {
 			// add file to the download-list
 			proxy.increaseDownloadNumber(filename);
 			return respond;
+			} 
+			return new MessageResponse("We are sorry! There is currently no online file server! Try again later!");
 		}
 		return new MessageResponse("No user is authenticated!");
 	}

@@ -22,7 +22,6 @@ public class SubscribeModel {
 	 * @param subscribe 
 	 * @param filename
 	 * @param number
-	 * @param currentNumber
 	 */
 	public SubscribeModel(SubscribeService subscribe, String filename, int number) {
 		this.filename = filename;
@@ -31,13 +30,15 @@ public class SubscribeModel {
 		this.currentNumber = 0;
 	}
 	
+	/**
+	 * If the current 
+	 */
 	public void addDownload(){
 		currentNumber++;
-		if(currentNumber >= number){
+		if(currentNumber == number){
 			try {
 				subscribe.invoke();
 			} catch (RemoteException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
@@ -46,7 +47,7 @@ public class SubscribeModel {
 	/**
 	 * @return the filename of the model
 	 */
-	public Object getFileName() {
+	public String getFileName() {
 		return filename;
 	}
 

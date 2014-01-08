@@ -887,7 +887,7 @@ public class Proxy implements Runnable {
 	 */
 	public PublicKey getUserPublicKey(String username) {
 		if(FileUtils.check(keyDir,username+".pub.pem")){
-			return SecurityUtils.readPublicKey(keyDir + "\\" + username + ".pub.pem");
+			return SecurityUtils.readPublicKey(keyDir + File.separator + username + ".pub.pem");
 		}
 		return null;
 	}
@@ -898,7 +898,7 @@ public class Proxy implements Runnable {
 	 * @return PublicKey of the Proxy.
 	 */
 	public PublicKey getProxyPublicKey() {
-		return SecurityUtils.readPublicKey(keyDir + "\\proxy.pub.pem");
+		return SecurityUtils.readPublicKey(keyDir + File.separator +"proxy.pub.pem");
 	}
 
 	/**
@@ -909,7 +909,7 @@ public class Proxy implements Runnable {
 	 * @return true, if the public key of the user was correctly stored, else false
 	 */
 	public boolean setUserPublicKey(String username, PublicKey publicKey) {
-		return SecurityUtils.storePublicKey(publicKey, keyDir + "\\" + username + ".pub.pem");
+		return SecurityUtils.storePublicKey(publicKey, keyDir + File.separator + username + ".pub.pem");
 	}
 
 	/**

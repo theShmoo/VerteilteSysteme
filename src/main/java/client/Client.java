@@ -60,11 +60,12 @@ public class Client implements IClient, Runnable {
 
 	// security
 	private PublicKey proxyPublicKey;
+	private PrivateKey userPrivateKey;
 	private String keyDir;
 	private byte[] clientChallenge;
 	private byte[] secretKey;
 	private byte[] IV;
-	
+
 	// RMI
 	private IRMI rmi = null;
 
@@ -97,8 +98,8 @@ public class Client implements IClient, Runnable {
 				proxyHost);
 		this.files = new ArrayList<FileInfo>();
 		updateFiles();
-		
-		//RMI
+
+		// RMI
 		Config configRMI = new Config("mc");
 		String rmiHost = configRMI.getString("proxy.host");
 		int rmiPort = configRMI.getInt("proxy.rmi.port");
@@ -106,7 +107,7 @@ public class Client implements IClient, Runnable {
 		try {
 			Registry registry = LocateRegistry.getRegistry(rmiHost, rmiPort);
 			rmi = (IRMI) registry.lookup(rmiBindingName);
-			//UnicastRemoteObject.exportObject(rmi, 0);
+			// UnicastRemoteObject.exportObject(rmi, 0);
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		} catch (NotBoundException e) {
@@ -356,14 +357,8 @@ public class Client implements IClient, Runnable {
 
 		// decrypt the encryptedMessage with the private Key of the User
 		byte[] b64message = null;
-		try {
-			b64message = SecurityUtils.decrypt(
-					getPrivateKey(username, password),
-					Base64.decode(encryptedMessage));
-		} catch (LoginException e) {
-			System.out.println(e.getMessage());
-			return null;
-		}
+		b64message = SecurityUtils.decrypt(userPrivateKey,
+				Base64.decode(encryptedMessage));
 
 		// get data out of message
 		// !ok <client-challenge> <proxy-challenge> <secret-key> <iv-parameter>.
@@ -378,12 +373,13 @@ public class Client implements IClient, Runnable {
 			return strs[2].getBytes();
 		}
 		return null;
-
 	}
 
-	private PrivateKey getPrivateKey(String username, String password) throws LoginException {
+	private PrivateKey getPrivateKey(String username, String password)
+			throws LoginException {
+
 		if (FileUtils.check(keyDir, username + ".pem")) {
-			return SecurityUtils.readPrivateKey(keyDir + "\\" + username
+			return SecurityUtils.readPrivateKey(keyDir + File.separator + username
 					+ ".pem", password);
 		}
 		return null;
@@ -405,7 +401,6 @@ public class Client implements IClient, Runnable {
 	/**
 	 * Checks if the connection to the proxy is valid, if not try to connect
 	 * again. If not possible throw an error
-
 	 */
 	public void checkConnection() {
 		if (!clientThread.isActive()) {
@@ -417,18 +412,20 @@ public class Client implements IClient, Runnable {
 			}
 		}
 	}
-	
+
 	/**
 	 * Check if the data is valid
 	 * 
-	 * @param password the password of the user that tries to logon
-	 * @param username the username of the user that tries to logon
+	 * @param password
+	 *            the password of the user that tries to logon
+	 * @param username
+	 *            the username of the user that tries to logon
 	 * @return true if the key is valid
 	 */
-	public boolean checkKey(String username, String password){
-		
+	public boolean checkKey(String username, String password) {
+
 		try {
-			getPrivateKey(username,password);
+			userPrivateKey = getPrivateKey(username, password);
 		} catch (LoginException e) {
 			return false;
 		}
@@ -442,30 +439,33 @@ public class Client implements IClient, Runnable {
 	public void logout() {
 		clientThread.deactivateSecureConnection();
 	}
-	
+
 	/**
 	 * @return the rmi
 	 */
 	public IRMI getRmi() {
 		return rmi;
 	}
-	
+
 	/**
 	 * Stores the public key of the Proxy.
 	 * 
-	 * @param publicKey public key of the Proxy
+	 * @param publicKey
+	 *            public key of the Proxy
 	 */
 	public void storeProxyPublicKey(PublicKey publicKey) {
 		SecurityUtils.storePublicKey(publicKey, keyDir + "\\proxy.pub.pem");
 	}
-	
+
 	/**
 	 * Returns the public key of the user.
 	 * 
-	 * @param username name of the user
+	 * @param username
+	 *            name of the user
 	 * @return PublicKey
 	 */
 	public PublicKey getUserPublicKey(String username) {
-		return SecurityUtils.readPublicKey(keyDir+"\\" + username + ".pub.pem");
+		return SecurityUtils.readPublicKey(keyDir + "\\" + username
+				+ ".pub.pem");
 	}
 }

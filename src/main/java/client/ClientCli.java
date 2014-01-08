@@ -57,10 +57,12 @@ public class ClientCli implements IClientCli {
 	public LoginResponse login(String username, String password) {
 		synchronized (this) {
 			if (login || !client.checkKey(username, password)) {
+				System.out.println("The private key could not get read");
 				return new LoginResponse(Type.WRONG_CREDENTIALS);
 			}
 
 			byte[] ciphertext = client.getClientChallenge(username);
+			System.out.println("Client Challenge: "+ciphertext);
 
 			if (ciphertext != null) {
 				LoginRequest data = new LoginRequest(ciphertext);
@@ -69,6 +71,7 @@ public class ClientCli implements IClientCli {
 
 				if (response instanceof LoginResponse) {
 					LoginResponse r = (LoginResponse) response;
+					System.out.println("LoginResponse: "+r.toString());
 					if(r.getType() != Type.WRONG_CREDENTIALS){
 						ciphertext = client.solveProxyChallenge(
 								r.getProxyChallenge(), username, password);
@@ -77,6 +80,7 @@ public class ClientCli implements IClientCli {
 							request = new RequestTO(data, RequestType.Login);
 							response = client.send(request);
 							LoginResponse lresp = client.checkLogin(response);
+							System.out.println("LoginResponse: "+lresp.toString());
 							login = lresp.getType() == Type.SUCCESS;
 							return lresp;
 						}

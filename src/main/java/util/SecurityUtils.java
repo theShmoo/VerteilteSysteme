@@ -74,6 +74,7 @@ public class SecurityUtils {
 	 */
 	public static PrivateKey readPrivateKey(String pathToPrivateKey,
 			final String password) throws LoginException{
+		System.out.println("get private key of "+pathToPrivateKey);
 		PrivateKey privateKey = null;
 		PEMReader in = null;
 		try {

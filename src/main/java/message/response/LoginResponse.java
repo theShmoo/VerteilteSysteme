@@ -20,7 +20,7 @@ public class LoginResponse implements Response {
 	private final byte[] proxyChallenge;
 	
 	public enum Type {
-		SUCCESS("Successfully logged in."),
+		SUCCESS("successfully logged in."),
 		WRONG_CREDENTIALS("Wrong username or password."),
 		OK("");
 		String message;

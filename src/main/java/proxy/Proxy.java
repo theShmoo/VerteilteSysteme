@@ -176,7 +176,7 @@ public class Proxy implements Runnable {
 			this.udpPort = config.getInt("udp.port");
 			this.fsTimeout = config.getInt("fileserver.timeout");
 			this.fsCheckPeriod = config.getInt("fileserver.checkPeriod");
-			this.privateKey = SecurityUtils.readPrivateKey(config.getString("key"),"12345");
+//			this.privateKey = SecurityUtils.readPrivateKey(config.getString("key"),"12345");
 			this.keyDir = config.getString("keys.dir");
 			byte[] keyBytes = new byte[1024];
 			try {
@@ -199,13 +199,13 @@ public class Proxy implements Runnable {
 				e1.printStackTrace();
 			}
 			close();
-		} catch (LoginException e1) {
-			try {
-				shell.writeLine(e1.getMessage());
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			close();
+//		} catch (LoginException e1) {
+//			try {
+//				shell.writeLine(e1.getMessage());
+//			} catch (IOException e) {
+//				e.printStackTrace();
+//			}
+//			close();
 		}
 		// synchronized Set
 		this.fileservers = Collections
@@ -528,18 +528,22 @@ public class Proxy implements Runnable {
 	 *             if the connection does not work
 	 */
 	public Set<String> getFiles() throws IOException {
-		FileServerStatusInfo f = getFileserverWithStatus();
-		if (f == null) {
+		List<FileServerStatusInfo> list = getGiffordsLists().get(0);
+		
+		if (list == null) {
 			// TODO maybe not null but Exception
 			return null;
 		}
-		Response response = f.getSender().send(
-				new RequestTO(new ListRequest(), RequestType.List));
-		if (response instanceof ListResponse) {
-			return ((ListResponse) response).getFileNames();
+		
+		Set<String> filenames = new LinkedHashSet<String>();
+		for (int i = 0; i < list.size(); i++) {
+			Response response = list.get(i).getSender().send(
+					new RequestTO(new ListRequest(), RequestType.List));
+			if (response instanceof ListResponse) {
+				filenames.addAll(((ListResponse) response).getFileNames());
+			}
 		}
-		// TODO maybe not null but Exception
-		return null;
+		return filenames;
 	}
 
 	/**
@@ -776,35 +780,38 @@ public class Proxy implements Runnable {
 	 *         list and on position 1 the nw list
 	 */
 	public ArrayList<List<FileServerStatusInfo>> getGiffordsLists() {
-		List<FileServerStatusInfo> fnr = getServerWithLowestUsage(serverList);
-		List<FileServerStatusInfo> fnw = getServerWithLowestUsage(serverList);
-
-		// if there not enough servers in the list to fulfil the giffords scheme
-		if (fnw.size() + fnr.size() <= serverList.size()) {
-			int missingServers = serverList.size() - fnw.size() - fnr.size();
-			int count = 0;
-			int j = 0;
-			while (serverList.get(j).getUsage() == fnw.get(0).getUsage()) {
-				j++;
-			}
-			float currentUsage = serverList.get(j).getUsage();
-
-			// add the servers with the second, third, ... lowest usage to the
-			// list until we have enough servers
-			while (count == missingServers) {
-				for (int i = 0; i < serverList.size(); i++) {
-					if (fnw.get(0).getUsage() < serverList.get(i).getUsage()
-							&& serverList.get(i).getUsage() <= currentUsage) {
-						fnw.add(serverList.get(i));
-						count++;
+		if (serverList.size() != 0) {
+			List<FileServerStatusInfo> fnr = getServerWithLowestUsage(serverList);
+			List<FileServerStatusInfo> fnw = getServerWithLowestUsage(serverList);
+	
+			// if there not enough servers in the list to fulfil the giffords scheme
+			if (fnw.size() + fnr.size() <= serverList.size()) {
+				int missingServers = serverList.size() - fnw.size() - fnr.size();
+				int count = 0;
+				int j = 0;
+				while (serverList.get(j).getUsage() == fnw.get(0).getUsage()) {
+					j++;
+				}
+				float currentUsage = serverList.get(j).getUsage();
+	
+				// add the servers with the second, third, ... lowest usage to the
+				// list until we have enough servers
+				while (count == missingServers) {
+					for (int i = 0; i < serverList.size(); i++) {
+						if (fnw.get(0).getUsage() < serverList.get(i).getUsage()
+								&& serverList.get(i).getUsage() <= currentUsage) {
+							fnw.add(serverList.get(i));
+							count++;
+						}
 					}
 				}
 			}
+			ArrayList<List<FileServerStatusInfo>> list = new ArrayList<List<FileServerStatusInfo>>();
+			list.add(fnr);
+			list.add(fnw);
+			return list;
 		}
-		ArrayList<List<FileServerStatusInfo>> list = new ArrayList<List<FileServerStatusInfo>>();
-		list.add(fnr);
-		list.add(fnw);
-		return list;
+		return null;
 	}
 
 	/**
@@ -817,21 +824,24 @@ public class Proxy implements Runnable {
 	private List<FileServerStatusInfo> getServerWithLowestUsage(
 			List<FileServerStatusInfo> quorums) {
 		// get lowest usage
-		long usage = quorums.get(0).getUsage();
-		for (int i = 0; i < quorums.size(); i++) {
-			if (usage > quorums.get(i).getUsage()) {
-				usage = quorums.get(i).getUsage();
+		if (quorums.size() != 0) {
+			long usage = quorums.get(0).getUsage();
+			for (int i = 0; i < quorums.size(); i++) {
+				if (usage > quorums.get(i).getUsage()) {
+					usage = quorums.get(i).getUsage();
+				}
 			}
-		}
-
-		// get list of servers with lowest usage
-		List<FileServerStatusInfo> list = new ArrayList<FileServerStatusInfo>();
-		for (int i = 0; i < quorums.size(); i++) {
-			if (usage == quorums.get(i).getUsage()) {
-				list.add(quorums.get(i));
+	
+			// get list of servers with lowest usage
+			List<FileServerStatusInfo> list = new ArrayList<FileServerStatusInfo>();
+			for (int i = 0; i < quorums.size(); i++) {
+				if (usage == quorums.get(i).getUsage()) {
+					list.add(quorums.get(i));
+				}
 			}
+			return list;
 		}
-		return list;
+		return null;
 	}
 
 	/**
@@ -857,8 +867,11 @@ public class Proxy implements Runnable {
 	 * @return number
 	 */
 	public int getReadQuorums() {
-		List<FileServerStatusInfo> list = getGiffordsLists().get(0);
-		return list.size();
+		if (getGiffordsLists() != null) {
+			List<FileServerStatusInfo> list = getGiffordsLists().get(0);
+			return list.size();
+		}
+		return 0;
 	}
 
 	/**
@@ -867,8 +880,11 @@ public class Proxy implements Runnable {
 	 * @return number
 	 */
 	public int getWriteQuorums() {
-		List<FileServerStatusInfo> list = getGiffordsLists().get(1);
-		return list.size();
+		if (getGiffordsLists() != null) {
+			List<FileServerStatusInfo> list = getGiffordsLists().get(1);
+			return list.size();
+		}
+		return 0;
 	}
 
 	/**
@@ -919,7 +935,8 @@ public class Proxy implements Runnable {
 	 */
 	public HashMap<String, Integer> topThreeDownloads() {
 		HashMap<String, Integer> map = new HashMap<String, Integer>();
-		Set<String> set = downloadMap.keySet();
+		Set<String> set = new LinkedHashSet<String>();
+		set.addAll(downloadMap.keySet());
 
 		if (!set.isEmpty()) {
 			String file = set.iterator().next();

@@ -2,6 +2,7 @@ package client;
 
 import java.io.IOException;
 import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
 import java.security.PublicKey;
 import java.util.List;
 
@@ -62,7 +63,7 @@ public class ClientCli implements IClientCli {
 			}
 
 			byte[] ciphertext = client.getClientChallenge(username);
-			System.out.println("Client Challenge: "+ciphertext);
+			System.out.println("Client Challenge: " + ciphertext);
 
 			if (ciphertext != null) {
 				LoginRequest data = new LoginRequest(ciphertext);
@@ -71,8 +72,8 @@ public class ClientCli implements IClientCli {
 
 				if (response instanceof LoginResponse) {
 					LoginResponse r = (LoginResponse) response;
-					System.out.println("LoginResponse: "+r.toString());
-					if(r.getType() != Type.WRONG_CREDENTIALS){
+					System.out.println("LoginResponse: " + r.toString());
+					if (r.getType() != Type.WRONG_CREDENTIALS) {
 						ciphertext = client.solveProxyChallenge(
 								r.getProxyChallenge(), username, password);
 						if (ciphertext != null) {
@@ -80,7 +81,8 @@ public class ClientCli implements IClientCli {
 							request = new RequestTO(data, RequestType.Login);
 							response = client.send(request);
 							LoginResponse lresp = client.checkLogin(response);
-							System.out.println("LoginResponse: "+lresp.toString());
+							System.out.println("LoginResponse: "
+									+ lresp.toString());
 							login = lresp.getType() == Type.SUCCESS;
 							return lresp;
 						}
@@ -251,8 +253,8 @@ public class ClientCli implements IClientCli {
 	@Command
 	public Response subscribe(String filename, int number)
 			throws RemoteException {
-		// TODO add callback object, so if logout or exit, that the method stops
-		return client.getRmi().subscribe(filename, number);
+		return client.getRmi().subscribe(
+				client.createSubscribeNotifier(filename, number), filename, number);
 	}
 
 	/**

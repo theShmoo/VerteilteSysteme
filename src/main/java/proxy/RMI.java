@@ -4,12 +4,14 @@
 package proxy;
 
 import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
 import java.security.PublicKey;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+import client.SubscribeService;
 import message.Response;
 import message.response.MessageResponse;
 
@@ -25,12 +27,15 @@ public class RMI extends UnicastRemoteObject implements IRMI {
 	 * @throws RemoteException
 	 */
 	protected RMI(Proxy proxy) throws RemoteException {
+		super();
 		this.proxy = proxy;
 	}
 
 	private static final long serialVersionUID = 4392725810478654970L;
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see proxy.IRMI#readQuorum()
 	 */
 	@Override
@@ -38,10 +43,13 @@ public class RMI extends UnicastRemoteObject implements IRMI {
 		if (proxy.getReadQuorums() == 0) {
 			return new MessageResponse("No servers are available.");
 		}
-		return new MessageResponse("Read-Quorum is set to " + proxy.getReadQuorums() + ".");
+		return new MessageResponse("Read-Quorum is set to "
+				+ proxy.getReadQuorums() + ".");
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see proxy.IRMI#writeQuorum()
 	 */
 	@Override
@@ -49,10 +57,13 @@ public class RMI extends UnicastRemoteObject implements IRMI {
 		if (proxy.getWriteQuorums() == 0) {
 			return new MessageResponse("No servers are available.");
 		}
-		return new MessageResponse("Write-Quorum is set to " + proxy.getWriteQuorums() + ".");
+		return new MessageResponse("Write-Quorum is set to "
+				+ proxy.getWriteQuorums() + ".");
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see proxy.IRMI#topThreeDownloads()
 	 */
 	@Override
@@ -75,16 +86,21 @@ public class RMI extends UnicastRemoteObject implements IRMI {
 		return new MessageResponse("Files have not yet been downloaded.");
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see proxy.IRMI#subscribe(java.lang.String, int)
 	 */
 	@Override
-	public Response subscribe(String filename, int number) throws RemoteException {
-		//TODO
-		return null;
+	public Response subscribe(SubscribeService subscribe, String filename,
+			int number) throws RemoteException {
+		proxy.startCountDownloads(subscribe, filename,number);
+		return new MessageResponse("Successfully subscribed for file: "+ filename);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see proxy.IRMI#getProxyPublicKey()
 	 */
 	@Override
@@ -92,14 +108,19 @@ public class RMI extends UnicastRemoteObject implements IRMI {
 		return proxy.getProxyPublicKey();
 	}
 
-	/* (non-Javadoc)
-	 * @see proxy.IRMI#setUserPublicKey(java.lang.String, java.security.PublicKey)
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see proxy.IRMI#setUserPublicKey(java.lang.String,
+	 * java.security.PublicKey)
 	 */
 	@Override
-	public Response setUserPublicKey(String username, PublicKey publicKey) throws RemoteException {
+	public Response setUserPublicKey(String username, PublicKey publicKey)
+			throws RemoteException {
 		boolean correct = proxy.setUserPublicKey(username, publicKey);
 		if (correct) {
-			return new MessageResponse("Successfully transmitted public key of user: " + username);
+			return new MessageResponse(
+					"Successfully transmitted public key of user: " + username);
 		}
 		return new MessageResponse("Exchanging user's public key failed.");
 	}

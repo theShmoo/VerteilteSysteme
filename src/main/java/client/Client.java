@@ -2,10 +2,14 @@ package client;
 
 import java.io.File;
 import java.io.IOException;
+import java.rmi.AccessException;
+import java.rmi.NoSuchObjectException;
 import java.rmi.NotBoundException;
+import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
@@ -31,6 +35,7 @@ import org.bouncycastle.util.encoders.Base64;
 import proxy.IRMI;
 import proxy.Proxy;
 import server.FileServer;
+import sun.rmi.server.UnicastServerRef;
 import util.Config;
 import util.FileUtils;
 import util.SecurityUtils;
@@ -67,7 +72,10 @@ public class Client implements IClient, Runnable {
 	private byte[] IV;
 
 	// RMI
+	private Registry registry;
 	private IRMI rmi = null;
+	private int rmiPort;
+	private String rmiBindingName;
 
 	/**
 	 * Create a new Client with the given {@link Shell} for its commands
@@ -102,12 +110,11 @@ public class Client implements IClient, Runnable {
 		// RMI
 		Config configRMI = new Config("mc");
 		String rmiHost = configRMI.getString("proxy.host");
-		int rmiPort = configRMI.getInt("proxy.rmi.port");
-		String rmiBindingName = configRMI.getString("binding.name");
+		this.rmiPort = configRMI.getInt("proxy.rmi.port");
+		rmiBindingName = configRMI.getString("binding.name");
 		try {
-			Registry registry = LocateRegistry.getRegistry(rmiHost, rmiPort);
+			registry = LocateRegistry.getRegistry(rmiHost, rmiPort);
 			rmi = (IRMI) registry.lookup(rmiBindingName);
-			// UnicastRemoteObject.exportObject(rmi, 0);
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		} catch (NotBoundException e) {
@@ -288,22 +295,7 @@ public class Client implements IClient, Runnable {
 		return file.getVersion();
 	}
 
-	/**
-	 * Closes all Threads and shuts down the client
-	 */
-	public void exit() {
-		if (clientThread != null)
-			clientThread.close();
-		try {
-			System.in.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		if (shellThread != null)
-			shellThread.interrupt();
-		if (shell != null)
-			shell.close();
-	}
+	
 
 	/**
 	 * Returns a Base64 encoded encrypted message that contains:
@@ -379,8 +371,8 @@ public class Client implements IClient, Runnable {
 			throws LoginException {
 
 		if (FileUtils.check(keyDir, username + ".pem")) {
-			return SecurityUtils.readPrivateKey(keyDir + File.separator + username
-					+ ".pem", password);
+			return SecurityUtils.readPrivateKey(keyDir + File.separator
+					+ username + ".pem", password);
 		}
 		return null;
 	}
@@ -467,5 +459,56 @@ public class Client implements IClient, Runnable {
 	public PublicKey getUserPublicKey(String username) {
 		return SecurityUtils.readPublicKey(keyDir + "\\" + username
 				+ ".pub.pem");
+	}
+
+	/**
+	 * Creates and binds a subscribe service and returns it
+	 * 
+	 * @param filename
+	 *            the filename
+	 * @param count
+	 *            the number of downloads of the file since subscribing
+	 * @return the created and binded subscirbe service
+	 */
+	public SubscribeService createSubscribeNotifier(String filename, int count) {
+		SubscribeService rmi = null;
+		try {
+			rmi = new SubscribeNotifier(shell, filename, count);
+		} catch (RemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return rmi;
+	}
+	
+	/**
+	 * Closes all Threads and shuts down the client
+	 */
+	public void exit() {
+		try {
+			registry.unbind(rmiBindingName);
+			UnicastRemoteObject.unexportObject(rmi, true);
+		} catch (NoSuchObjectException e1) {
+			e1.printStackTrace();
+		} catch (AccessException e) {
+			e.printStackTrace();
+		} catch (RemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NotBoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		if (clientThread != null)
+			clientThread.close();
+		try {
+			System.in.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		if (shellThread != null)
+			shellThread.interrupt();
+		if (shell != null)
+			shell.close();
 	}
 }

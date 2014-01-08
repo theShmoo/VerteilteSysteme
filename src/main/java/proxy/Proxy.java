@@ -24,7 +24,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -33,7 +35,6 @@ import java.util.concurrent.Executors;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import javax.security.auth.login.LoginException;
 
 import message.Response;
 import message.request.DetailedListRequest;
@@ -52,6 +53,7 @@ import model.FileServerInfo;
 import model.FileServerStatusInfo;
 import model.RequestTO;
 import model.RequestType;
+import model.SubscribeModel;
 import model.UserInfo;
 import model.UserLoginInfo;
 
@@ -67,6 +69,7 @@ import util.SingleServerSocketCommunication;
 import util.UserLoader;
 import cli.Shell;
 import client.Client;
+import client.SubscribeService;
 
 /**
  * 
@@ -101,12 +104,16 @@ public class Proxy implements Runnable {
 	private List<FileServerStatusInfo> serverList;
 
 	// DownloadMap
-	private HashMap<String, Integer> downloadMap;
+	private Map<String, Integer> downloadMap;
+	//subscribe to files
+	private List<SubscribeModel> subscribeList;
 	
 	//RMI
 	private IRMI rmi;
 	private Registry registry;
 	private String rmiBindingName;
+	
+	
 	
 	/**
 	 * Initialize a new Proxy
@@ -227,6 +234,7 @@ public class Proxy implements Runnable {
 		this.users = getUsers();
 		this.serverList = new ArrayList<FileServerStatusInfo>();
 		this.downloadMap = new HashMap<String, Integer>();
+		this.subscribeList = new LinkedList<SubscribeModel>();
 	}
 
 	/**
@@ -957,6 +965,12 @@ public class Proxy implements Runnable {
 			int count = downloadMap.get(filename);
 			downloadMap.put(filename, count++);
 		}
+		for(SubscribeModel m : subscribeList){
+			if(m.getFileName().equals(filename)){
+				m.addDownload();
+			}
+		}
+		
 	}
 	
 	/**
@@ -1000,5 +1014,15 @@ public class Proxy implements Runnable {
 			executor.shutdownNow();
 		if (shell != null)
 			shell.close();
+	}
+
+	/**
+	 * @param subscribe
+	 * @param filename
+	 * @param number
+	 */
+	public void startCountDownloads(SubscribeService subscribe,
+			String filename, int number) {
+		subscribeList.add(new SubscribeModel(subscribe,filename,number));
 	}
 }

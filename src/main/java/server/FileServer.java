@@ -29,6 +29,7 @@ import org.bouncycastle.util.encoders.Hex;
 
 import util.Config;
 import util.FileUtils;
+import util.IntegrityUtils;
 import cli.Shell;
 
 /**
@@ -61,7 +62,6 @@ public class FileServer implements Runnable {
 	private String hMackeylocation;
 	private Key key;
 
-	
 	/**
 	 * Initialize a new fileserver with a {@link Shell}
 	 * 
@@ -90,7 +90,7 @@ public class FileServer implements Runnable {
 		this.running = true;
 
 		getServerData(config);
-		
+
 		createhMAC(key);
 		this.serverCli = new FileServerCli(this);
 		this.files = new ArrayList<FileInfo>();
@@ -105,109 +105,109 @@ public class FileServer implements Runnable {
 			this.proxyHost = config.getString("proxy.host");
 			this.folder = new File(config.getString("fileserver.dir"));
 			this.alive = config.getInt("fileserver.alive");
-			
-			byte[] keyBytes = new byte[1024]; 
-			try { 
-			File hmackey = new File(config.getString("hmac.key"));
-			FileInputStream fis = new FileInputStream(hmackey);
-			fis.read(keyBytes);
-			fis.close();
-			byte[] input = Hex.decode(keyBytes);
-			this.key = new SecretKeySpec(input, "HmacSHA256");
-			}
-			catch (FileNotFoundException e) { 
+
+			byte[] keyBytes = new byte[1024];
+			try {
+				File hmackey = new File(config.getString("hmac.key"));
+				FileInputStream fis = new FileInputStream(hmackey);
+				fis.read(keyBytes);
+				fis.close();
+				byte[] input = Hex.decode(keyBytes);
+				this.key = new SecretKeySpec(input, "HmacSHA256");
+			} catch (FileNotFoundException e) {
 				System.out.println("Error in getServerData: Keyloading 1");
-			}
-			catch (IOException e) { 
+			} catch (IOException e) {
 				System.out.println("Error in getServerData: Keyloading 2");
-			}   
+			}
 		} catch (NumberFormatException e) {
 			System.out
-			.println("The configuration file \"client.properties\" is invalid! \n\r");
+					.println("The configuration file \"client.properties\" is invalid! \n\r");
 			e.printStackTrace();
 			close();
 		}
 	}
 
-	/** 
+	/**
 	 * inits hMac with key
+	 * 
 	 * @param key
 	 */
-	public void createhMAC(Key key){  
+	public void createhMAC(Key key) {
 		try {
 			this.hMac = Mac.getInstance("HmacSHA256");
-			this.hMac.init(key); 
-		} catch (NoSuchAlgorithmException e) {  
+			this.hMac.init(key);
+		} catch (NoSuchAlgorithmException e) {
 			System.out.println("createhashmacerror 1");
-		} catch (InvalidKeyException e) {  
+		} catch (InvalidKeyException e) {
 			System.out.println("createhashmacerror 2");
-		}    
+		}
 	}
-  
-	/** 
+
+	/**
 	 * creates a hash for a given message
+	 * 
 	 * @param message
 	 * @return hash
 	 */
-	public byte[] createHashforMessage(String message){
-		hMac.update(message.getBytes()); 
+	public byte[] createHashforMessage(String message) {
+		hMac.update(message.getBytes());
 		byte[] hash = hMac.doFinal(message.getBytes());
 		return hash;
-	}  
-	
-	/** 
+	}
+
+	/**
 	 * prepends a message with a base64 encoded hash
-	 * @param hash 
+	 * 
+	 * @param hash
 	 * @param message
 	 * @return prepended message
 	 */
-	public String prependmessage(byte[] hash, String message){
-		message = new String(Base64.encode(hash)) + " " + message; 
+	public String prependmessage(byte[] hash, String message) {
+		message = new String(Base64.encode(hash)) + " " + message;
 		return message;
 	}
- 
-	/** 
-	 * verifies a message 
+
+	/**
+	 * verifies a message
+	 * 
 	 * @param message
 	 * @return null if an error occurred or the message without hash
 	 */
-    public String verify(String message)
-    {
-    	 
-      if (message == null){
-        System.out.println("Error in verify message is null");
-    	  return null;
-        }
-      if (message.charAt(0) == '!')
-        return message;
- 
-        assert message.matches("["+B64+"]{43}= [\\s[^\\s]]+");
+	public String verify(String message) {
+
+		if (message == null) {
+			System.out.println("Error in verify message is null");
+			return null;
+		}
+		if (message.charAt(0) == '!')
+			return message;
+
+		assert message.matches("[" + B64 + "]{43}= [\\s[^\\s]]+");
 		System.out.println("Base64 Encoding Error");
-      
-      int index = message.indexOf(' ');
-    	
-      if (index == -1)
-      {
-        System.out.println("Error message format error");
-        System.out.println(message);
-        return null;
-      }
-   
-        //verify
-        String hashFM = message.substring(0, index);
-        String messageWithoutHash = message.substring(index + 1);
-        String hashNG = new String(Base64.encode(this.createHashforMessage(messageWithoutHash)));
-        if (!hashFM.equals(hashNG))
-        {
-          System.out.println("Error: invalid MAC:");
-          System.out.println(message); 
-           return null;
-        }
-        message = messageWithoutHash; 
-        
-      return message;
-    }
- 
+
+		int index = message.indexOf(' ');
+
+		if (index == -1) {
+			System.out.println("Error message format error");
+			System.out.println(message);
+			return null;
+		}
+
+		// verify
+		String hashFM = message.substring(0, index);
+		String messageWithoutHash = message.substring(index + 1);
+		String hashNG = new String(Base64.encode(this
+				.createHashforMessage(messageWithoutHash)));
+		if (!hashFM.equals(hashNG)) {
+			System.out.println("Error: invalid MAC:");
+			System.out.println(message);
+			return null;
+		}
+		message = messageWithoutHash;
+
+		return message;
+	}
+
 	/**
 	 * Updates the files
 	 * 
@@ -234,24 +234,28 @@ public class FileServer implements Runnable {
 	/**
 	 * updates the file
 	 * 
-	 * @param filename the name of the file
-	 * @param version the new version of the file
-	 * @param filesize the new size of the file
+	 * @param filename
+	 *            the name of the file
+	 * @param version
+	 *            the new version of the file
+	 * @param filesize
+	 *            the new size of the file
 	 */
-	private synchronized void updateFile(String filename, float version, int filesize) {
+	private synchronized void updateFile(String filename, float version,
+			int filesize) {
 
 		boolean exists = false;
 		for (int i = 0; i < files.size(); i++) {
 			FileInfo updateable = files.get(i);
 			if (filename.equals(updateable.getFilename())) {
-				updateable.setVersion((int)version);
+				updateable.setVersion((int) version);
 				updateable.setFilesize(filesize);
 				exists = true;
 			}
 		}
 		if (!exists) {
 			FileInfo info = new FileInfo(filename, filesize);
-			info.setVersion((int)version);
+			info.setVersion((int) version);
 			files.add(info);
 		}
 
@@ -362,7 +366,8 @@ public class FileServer implements Runnable {
 	 */
 	public void persist(UploadRequest request) {
 		FileUtils.write(request.getContent(), getPath(), request.getFilename());
-		updateFile(request.getFilename(), request.getVersion(), request.getContent().length);
+		updateFile(request.getFilename(), request.getVersion(),
+				request.getContent().length);
 	}
 
 	/**
@@ -398,5 +403,12 @@ public class FileServer implements Runnable {
 			executor.shutdownNow();
 		if (shell != null)
 			shell.close();
+	}
+
+	/**
+	 * @return the hmac of the fileserver
+	 */
+	public Mac getHMac() {
+		return this.hMac;
 	}
 }

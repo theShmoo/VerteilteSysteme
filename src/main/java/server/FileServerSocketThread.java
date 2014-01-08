@@ -1,13 +1,11 @@
 package server;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 
 import message.Response;
-import message.request.DownloadFileRequest;
 import message.request.InfoRequest;
 import message.request.UploadRequest;
 import message.request.VersionRequest;
@@ -17,11 +15,11 @@ import message.response.InfoResponse;
 import message.response.ListResponse;
 import message.response.MessageResponse;
 import message.response.VersionResponse;
+import model.DownloadFileRequest;
 import model.DownloadTicket;
 import model.FileInfo;
 import model.RequestTO;
 import proxy.Proxy;
-import util.ChecksumUtils;
 import util.FileUtils;
 import util.TCPChannel;
 import util.UnexpectedCloseException;
@@ -47,6 +45,7 @@ public class FileServerSocketThread extends TCPChannel implements IFileServer {
 	public FileServerSocketThread(FileServer fileserver, Socket socket) {
 		super(socket);
 		this.server = fileserver;
+		activateIntegrity(server.getHMac());
 	}
 
 	@Override
@@ -121,17 +120,9 @@ public class FileServerSocketThread extends TCPChannel implements IFileServer {
 
 	@Override
 	public Response download(DownloadFileRequest request) throws IOException {
-		DownloadTicket ticket = request.getTicket();
-		if (ChecksumUtils.verifyChecksum(ticket.getUsername(),
-				new File(server.getPath(), ticket.getFilename()), server
-						.getFileInfo(ticket.getFilename()).getVersion(), ticket
-						.getChecksum())) {
 			byte[] content = FileUtils.read(server.getPath(),
-					ticket.getFilename());
-			return new DownloadFileResponse(ticket, content);
-		} else {
-			return new MessageResponse("The integrity could not be verified!");
-		}
+					request.getFilename());
+			return new DownloadFileResponse(new DownloadTicket(), content);
 	}
 
 	@Override
@@ -156,7 +147,6 @@ public class FileServerSocketThread extends TCPChannel implements IFileServer {
 	public MessageResponse upload(UploadRequest request) throws IOException {
 
 		server.persist(request);
-
 		return new MessageResponse("File successfully uploaded.");
 	}
 }

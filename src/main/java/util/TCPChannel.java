@@ -5,6 +5,9 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 
+import javax.crypto.Mac;
+
+import message.response.MessageResponse;
 import proxy.ProxyTCPChannel;
 import server.FileServerSocketThread;
 
@@ -26,6 +29,10 @@ public abstract class TCPChannel implements Runnable, Channel, SecureChannel {
 	private boolean encrypted = false;
 	private byte[] key;
 	private byte[] IV;
+	
+	//integrity
+	private boolean integrity = false;
+	private Mac hmac;
 
 	/**
 	 * Initialize a new SocketThread
@@ -56,6 +63,13 @@ public abstract class TCPChannel implements Runnable, Channel, SecureChannel {
 				
 				if(encrypted){
 					data = SecurityUtils.decrypt(key,IV,data);
+				}
+				if(integrity){
+					try {
+						data = IntegrityUtils.verify(new String(data), hmac);
+					} catch (IntegrityException e) {
+						return new MessageResponse(e.getMessage());
+					}
 				}
 				input = SecurityUtils.deserialize(data);
 				response = handleInput(input);
@@ -139,6 +153,14 @@ public abstract class TCPChannel implements Runnable, Channel, SecureChannel {
 	@Override
 	public synchronized void deactivateSecureConnection() {
 		encrypted = false;
+	}
+	
+	/**
+	 * @param hMac
+	 */
+	public synchronized void activateIntegrity(Mac hMac) {
+		this.hmac = hMac;
+		this.integrity = true;
 	}
 
 }

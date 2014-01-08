@@ -39,16 +39,13 @@ import javax.security.auth.login.LoginException;
 
 import message.Response;
 import message.request.DetailedListRequest;
-import message.request.DownloadFileRequest;
 import message.request.InfoRequest;
 import message.request.ListRequest;
 import message.request.UploadRequest;
 import message.request.VersionRequest;
 import message.response.DetailedListResponse;
-import message.response.DownloadFileResponse;
 import message.response.ListResponse;
 import message.response.VersionResponse;
-import model.DownloadTicket;
 import model.FileInfo;
 import model.FileServerInfo;
 import model.FileServerStatusInfo;
@@ -58,11 +55,9 @@ import model.SubscribeModel;
 import model.UserInfo;
 import model.UserLoginInfo;
 
-import org.bouncycastle.util.encoders.Base64;
 import org.bouncycastle.util.encoders.Hex;
 
 import server.FileServer;
-import util.ChecksumUtils;
 import util.Config;
 import util.FileUtils;
 import util.SecurityUtils;
@@ -106,16 +101,14 @@ public class Proxy implements Runnable {
 
 	// DownloadMap
 	private Map<String, Integer> downloadMap;
-	//subscribe to files
+	// subscribe to files
 	private List<SubscribeModel> subscribeList;
-	
-	//RMI
+
+	// RMI
 	private IRMI rmi;
 	private Registry registry;
 	private String rmiBindingName;
-	
-	
-	
+
 	/**
 	 * Initialize a new Proxy
 	 */
@@ -158,9 +151,9 @@ public class Proxy implements Runnable {
 		createhMAC(key);
 
 		this.proxyTcpHandlers = new ArrayList<ProxyTCPChannel>();
-		// this.fileVersionMap = new ConcurrentHashMap<String, Integer>();	
+		// this.fileVersionMap = new ConcurrentHashMap<String, Integer>();
 
-		//RMI
+		// RMI
 		Config configRMI = new Config("mc");
 		int rmiPort = configRMI.getInt("proxy.rmi.port");
 		rmiBindingName = configRMI.getString("binding.name");
@@ -175,15 +168,14 @@ public class Proxy implements Runnable {
 				rmi = new RMI(this);
 				registry.rebind(rmiBindingName, rmi);
 			} catch (RemoteException e1) {
-				try { 
-					e.printStackTrace(); //XXX remove
+				try {
 					shell.writeLine(e.getMessage());
 				} catch (IOException e2) {
 					// TODO Auto-generated catch block
 					e2.printStackTrace();
 				}
-			}			        
-		}			
+			}
+		}
 	}
 
 	/**
@@ -198,7 +190,8 @@ public class Proxy implements Runnable {
 			this.udpPort = config.getInt("udp.port");
 			this.fsTimeout = config.getInt("fileserver.timeout");
 			this.fsCheckPeriod = config.getInt("fileserver.checkPeriod");
-			this.privateKey = SecurityUtils.readPrivateKey(config.getString("key"),"12345");
+			this.privateKey = SecurityUtils.readPrivateKey(
+					config.getString("key"), "12345");
 			this.keyDir = config.getString("keys.dir");
 			byte[] keyBytes = new byte[1024];
 			try {
@@ -258,9 +251,9 @@ public class Proxy implements Runnable {
 				users.add(new UserLoginInfo(username, password, credits));
 			} catch (NumberFormatException e) {
 				System.out
-				.println("The configutation of "
-						+ username
-						+ " of the configuration file \"user.properties\" is invalid! \n\r");
+						.println("The configutation of "
+								+ username
+								+ " of the configuration file \"user.properties\" is invalid! \n\r");
 				close();
 			}
 		}
@@ -427,70 +420,6 @@ public class Proxy implements Runnable {
 		}
 	}
 
-	/**
-	 * creates a hash for a given message
-	 * 
-	 * @param message
-	 * @return hash
-	 */
-	public byte[] createHashforMessage(String message) {
-		hMac.update(message.getBytes());
-		byte[] hash = hMac.doFinal(message.getBytes());
-		return hash;
-	}
-
-	/**
-	 * prepends a message with a base64 encoded hash
-	 * 
-	 * @param hash
-	 * @param message
-	 * @return prepended message
-	 */
-	public String prependmessage(byte[] hash, String message) {
-		message = new String(Base64.encode(hash)) + " " + message;
-		return message;
-	}
-
-	/**
-	 * verifies a message
-	 * 
-	 * @param message
-	 * @return null if an error occurred or the message without hash
-	 */
-	public String verify(String message) {
-
-		if (message == null) {
-			System.out.println("Error in verify message is null");
-			return null;
-		}
-		if (message.charAt(0) == '!')
-			return message;
-
-		assert message.matches("[" + B64 + "]{43}= [\\s[^\\s]]+");
-		System.out.println("Base64 Encoding Error");
-
-		int index = message.indexOf(' ');
-
-		if (index == -1) {
-			System.out.println("Error message format error");
-			System.out.println(message);
-			return null;
-		}
-
-		// verify
-		String hashFM = message.substring(0, index);
-		String messageWithoutHash = message.substring(index + 1);
-		String hashNG = new String(Base64.encode(this
-				.createHashforMessage(messageWithoutHash)));
-		if (!hashFM.equals(hashNG)) {
-			System.out.println("Error: invalid MAC:");
-			System.out.println(message);
-			return null;
-		}
-		message = messageWithoutHash;
-
-		return message;
-	}
 
 	/**
 	 * Iterate through all {@link FileServer}s and get the one with the lowest
@@ -560,11 +489,12 @@ public class Proxy implements Runnable {
 
 		Set<String> filenames = new LinkedHashSet<String>();
 		for (int i = 0; i < list.size(); i++) {
-			Response response = list.get(i).getSender().send(
-					new RequestTO(new ListRequest(), RequestType.List));
-			if (response instanceof ListResponse) {
-				filenames.addAll(((ListResponse) response).getFileNames());
-			}
+			SingleServerSocketCommunication sender = list.get(i).getSender();
+
+			sender.activateIntegrity(this.hMac); // XXX integrity
+			Response response = sender.send(new RequestTO(new ListRequest(),
+					RequestType.List));
+			filenames.addAll(((ListResponse) response).getFileNames());
 		}
 		return filenames;
 	}
@@ -578,44 +508,13 @@ public class Proxy implements Runnable {
 	 */
 	private Set<FileInfo> getDetailedFiles(
 			SingleServerSocketCommunication sender) throws IOException {
+		sender.activateIntegrity(hMac);
 		Response response = sender.send(new RequestTO(
 				new DetailedListRequest(), RequestType.DetailedList));
 		if (response instanceof DetailedListResponse) {
 			return ((DetailedListResponse) response).getFileInfo();
 		}
 		throw new IOException(response.toString());
-	}
-
-	/**
-	 * This method receives the content from a file from a specific Connection
-	 * 
-	 * @param file
-	 * @param version
-	 * @param fileServerStatusInfo
-	 * @return
-	 * @throws IOException
-	 */
-	private byte[] getFileContent(String file, int version, long size,
-			SingleServerSocketCommunication sender) throws IOException,
-			IllegalArgumentException {
-		Response response = sender.send(new RequestTO(
-				// Download Request
-				new DownloadFileRequest(
-						// needs a Ticket
-						new DownloadTicket("proxy", file,
-								ChecksumUtils
-								// with a checksum
-								.generateChecksum("proxy", file,
-										version, size), serverSocket
-										.getInetAddress(), tcpPort)),
-										RequestType.File));
-		if (response instanceof DownloadFileResponse) {
-			DownloadFileResponse download = (DownloadFileResponse) response;
-			return download.getContent();
-		} else {
-			throw new IllegalArgumentException("Conflict! "
-					+ response.toString());
-		}
 	}
 
 	/**
@@ -648,6 +547,7 @@ public class Proxy implements Runnable {
 	private int getVersion(SingleServerSocketCommunication sender,
 			String filename) throws IOException {
 		int version = -1;
+		sender.activateIntegrity(hMac);
 		Response response = sender.send(new RequestTO(new VersionRequest(
 				filename), RequestType.Version));
 		if (response instanceof VersionResponse) {
@@ -685,6 +585,7 @@ public class Proxy implements Runnable {
 	 */
 	private Response getFileInfo(SingleServerSocketCommunication sender,
 			String filename) {
+		sender.activateIntegrity(hMac);
 		return sender.send(new RequestTO(new InfoRequest(filename),
 				RequestType.Info));
 	}
@@ -752,16 +653,12 @@ public class Proxy implements Runnable {
 		}
 		currentVersion++;
 
-		// add file to servers from nw quorum list
-		for (FileServerStatusInfo f : fnw) {
-			f.getSender().holdConnectionOpen();
-		}
-
 		RequestTO requestWithVersion = new RequestTO(new UploadRequest(
 				request.getFilename(), currentVersion, request.getContent()),
 				RequestType.Upload);
 
 		for (FileServerStatusInfo f : fnw) {
+			f.getSender().activateIntegrity(this.hMac);
 			f.getSender().send(requestWithVersion);
 			f.getSender().close();
 			f.addUsage(request.getContent().length);
@@ -779,9 +676,11 @@ public class Proxy implements Runnable {
 			List<FileServerStatusInfo> fnr = getServerWithLowestUsage(serverList);
 			List<FileServerStatusInfo> fnw = getServerWithLowestUsage(serverList);
 
-			// if there not enough servers in the list to fulfil the giffords scheme
+			// if there not enough servers in the list to fulfil the giffords
+			// scheme
 			if (fnw.size() + fnr.size() <= serverList.size()) {
-				int missingServers = serverList.size() + 1 - fnw.size() - fnr.size();
+				int missingServers = serverList.size() + 1 - fnw.size()
+						- fnr.size();
 				int count = 0;
 				float currentUsage = 0;
 				for (int i = 0; i < serverList.size(); i++) {
@@ -791,12 +690,15 @@ public class Proxy implements Runnable {
 					}
 				}
 
-				// add the servers with the second, third, ... lowest usage to the
+				// add the servers with the second, third, ... lowest usage to
+				// the
 				// list until we have enough servers
 				while (count < missingServers) {
 					for (int i = 0; i < serverList.size(); i++) {
-						if (fnw.get(0).getUsage() <= serverList.get(i).getUsage()
-								&& serverList.get(i).getUsage() <= currentUsage && count < missingServers) {
+						if (fnw.get(0).getUsage() <= serverList.get(i)
+								.getUsage()
+								&& serverList.get(i).getUsage() <= currentUsage
+								&& count < missingServers) {
 							fnw.add(serverList.get(i));
 							count++;
 						}
@@ -901,12 +803,15 @@ public class Proxy implements Runnable {
 
 	/**
 	 * Returns the Public Key from the specified user
-	 * @param username the username of the user
-	 * @return  the Public Key from the specified user
+	 * 
+	 * @param username
+	 *            the username of the user
+	 * @return the Public Key from the specified user
 	 */
 	public PublicKey getUserPublicKey(String username) {
-		if(FileUtils.check(keyDir,username+".pub.pem")){
-			return SecurityUtils.readPublicKey(keyDir + File.separator + username + ".pub.pem");
+		if (FileUtils.check(keyDir, username + ".pub.pem")) {
+			return SecurityUtils.readPublicKey(keyDir + File.separator
+					+ username + ".pub.pem");
 		}
 		return null;
 	}
@@ -917,22 +822,28 @@ public class Proxy implements Runnable {
 	 * @return PublicKey of the Proxy.
 	 */
 	public PublicKey getProxyPublicKey() {
-		return SecurityUtils.readPublicKey(keyDir + File.separator +"proxy.pub.pem");
+		return SecurityUtils.readPublicKey(keyDir + File.separator
+				+ "proxy.pub.pem");
 	}
 
 	/**
 	 * Sets the public key of the user.
 	 * 
-	 * @param username name of the user
-	 * @param publicKey public key of the user
-	 * @return true, if the public key of the user was correctly stored, else false
+	 * @param username
+	 *            name of the user
+	 * @param publicKey
+	 *            public key of the user
+	 * @return true, if the public key of the user was correctly stored, else
+	 *         false
 	 */
 	public boolean setUserPublicKey(String username, PublicKey publicKey) {
-		return SecurityUtils.storePublicKey(publicKey, keyDir + File.separator + username + ".pub.pem");
+		return SecurityUtils.storePublicKey(publicKey, keyDir + File.separator
+				+ username + ".pub.pem");
 	}
 
 	/**
-	 * Return a Map of 3 files and the number of their downloads, which were downloaded the most.
+	 * Return a Map of 3 files and the number of their downloads, which were
+	 * downloaded the most.
 	 * 
 	 * @return a HashMap of String and Integer
 	 */
@@ -965,7 +876,8 @@ public class Proxy implements Runnable {
 	/**
 	 * Increases the number of downloads of the file
 	 * 
-	 * @param filename the name of the file
+	 * @param filename
+	 *            the name of the file
 	 */
 	public void increaseDownloadNumber(String filename) {
 		if (!downloadMap.containsKey(filename)) {
@@ -974,20 +886,20 @@ public class Proxy implements Runnable {
 			int count = downloadMap.get(filename);
 			downloadMap.put(filename, count++);
 		}
-		for(SubscribeModel m : subscribeList){
-			if(m.getFileName().equals(filename)){
+		for (SubscribeModel m : subscribeList) {
+			if (m.getFileName().equals(filename)) {
 				m.addDownload();
 			}
 		}
-		
+
 	}
-	
+
 	/**
 	 * Closes all Sockets and Streams
 	 */
 	public void close() {
 		running = false;
-		//shut down RMI
+		// shut down RMI
 		try {
 			registry.unbind(rmiBindingName);
 			UnicastRemoteObject.unexportObject(rmi, true);
@@ -1032,6 +944,13 @@ public class Proxy implements Runnable {
 	 */
 	public void startCountDownloads(SubscribeService subscribe,
 			String filename, int number) {
-		subscribeList.add(new SubscribeModel(subscribe,filename,number));
+		subscribeList.add(new SubscribeModel(subscribe, filename, number));
+	}
+
+	/**
+	 * @return the hmac
+	 */
+	public Mac getHMac() {
+		return hMac;
 	}
 }

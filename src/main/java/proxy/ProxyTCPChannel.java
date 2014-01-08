@@ -26,15 +26,17 @@ import message.response.ListResponse;
 import message.response.LoginResponse;
 import message.response.LoginResponse.Type;
 import message.response.MessageResponse;
+import model.DownloadFileRequest;
 import model.DownloadTicket;
 import model.FileServerInfo;
 import model.FileServerStatusInfo;
 import model.RequestTO;
+import model.RequestType;
 import model.UserLoginInfo;
 
 import org.bouncycastle.util.encoders.Base64;
 
-import util.ChecksumUtils;
+import util.IntegrityUtils;
 import util.SecurityUtils;
 import util.TCPChannel;
 import util.UnexpectedCloseException;
@@ -319,10 +321,10 @@ public class ProxyTCPChannel extends TCPChannel implements IProxy {
 				}
 			}
 
-			String checksum = ChecksumUtils.generateChecksum(user.getName(),
-					filename, version, size);
-			DownloadTicket ticket = new DownloadTicket(user.getName(),
-					filename, checksum, server.getAddress(), server.getPort());
+			// generate infos
+			RequestTO di = new RequestTO(new DownloadFileRequest(server.getPort(),filename),RequestType.File);
+			byte[] checksum = IntegrityUtils.createHashforMessage(new String(SecurityUtils.serialize(di)), proxy.getHMac());
+			DownloadTicket ticket = new DownloadTicket(di, checksum);
 			DownloadTicketResponse respond = new DownloadTicketResponse(ticket);
 			// everything worked well the user gets his ticket so we can rank
 			// the fileserver as working

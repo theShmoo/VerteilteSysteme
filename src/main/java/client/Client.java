@@ -249,14 +249,15 @@ public class Client implements IClient, Runnable {
 	 */
 	public Response download(DownloadTicket ticket) {
 		SingleServerSocketCommunication clientToFileServer = new SingleServerSocketCommunication(
-				ticket.getPort(), proxyHost);
-		Response response = clientToFileServer.send(new RequestTO(
-				new DownloadFileRequest(ticket), RequestType.File));
+				ticket.getInfo().getPort(), proxyHost);
+		
+		clientToFileServer.setChecksum(ticket.getChecksum());
+		Response response = clientToFileServer.send(ticket.getRequest());
 
 		if (response instanceof DownloadFileResponse) {
 			DownloadFileResponse download = (DownloadFileResponse) response;
 			FileUtils.write(download.getContent(), downloadDir,
-					ticket.getFilename());
+					ticket.getInfo().getFilename());
 			updateFiles();
 		}
 		return response;

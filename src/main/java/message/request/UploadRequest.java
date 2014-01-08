@@ -4,6 +4,8 @@ import message.Request;
 
 import java.nio.charset.Charset;
 
+import util.IntegrityUtils;
+
 /**
  * Uploads the file with the given name.
  * <p/>
@@ -22,7 +24,7 @@ public class UploadRequest implements Request {
 
 	public UploadRequest(String filename, int version, byte[] content) {
 		this.filename = filename;
-		this.version = version;
+		this.version = version;		
 		this.content = content;
 	}
 

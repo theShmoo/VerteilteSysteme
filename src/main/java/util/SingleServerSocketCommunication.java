@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
+import javax.crypto.Mac;
+
 import message.Response;
 import message.response.MessageResponse;
 import model.RequestTO;
@@ -28,6 +30,12 @@ public class SingleServerSocketCommunication implements SecureChannel {
 	private boolean encrypted = false;
 	private byte[] key;
 	private byte[] IV;
+
+	// Integrity
+	private boolean integrity = false;
+	private boolean checksumIsSet = false;
+	private byte[] checksum;
+	private Mac hmac;
 
 	/**
 	 * Initialize a new SingleServerSocketCommunication for TCP connections
@@ -75,6 +83,20 @@ public class SingleServerSocketCommunication implements SecureChannel {
 
 		try {
 			byte[] out = SecurityUtils.serialize(request);
+			// verify stuff
+			if (integrity) {
+				String hashedContent = "";
+				if (checksumIsSet) {
+					hashedContent = IntegrityUtils.prependmessage(checksum,
+							new String(out));
+				} else {
+					byte[] hash = IntegrityUtils.createHashforMessage(
+							new String(out), hmac);
+					hashedContent = IntegrityUtils.prependmessage(hash,
+							new String(out));
+				}
+				out = hashedContent.getBytes();
+			}
 			if (encrypted) {
 				out = SecurityUtils.encrypt(key, IV, out);
 			}
@@ -90,6 +112,7 @@ public class SingleServerSocketCommunication implements SecureChannel {
 			if (encrypted) {
 				data = SecurityUtils.decrypt(key, IV, data);
 			}
+
 			response = (Response) SecurityUtils.deserialize(data);
 		} catch (IOException e) {
 			running = false;
@@ -153,8 +176,8 @@ public class SingleServerSocketCommunication implements SecureChannel {
 				socket.close();
 			}
 		} catch (IOException e) {
-			//It was already closed so it threw an error
-			//e.printStackTrace();
+			// It was already closed so it threw an error
+			// e.printStackTrace();
 		}
 	}
 
@@ -166,5 +189,22 @@ public class SingleServerSocketCommunication implements SecureChannel {
 	public boolean isActive() {
 		return !socket.isClosed() && !socket.isInputShutdown()
 				&& !socket.isOutputShutdown() && running;
+	}
+
+	/**
+	 * @param hMac
+	 */
+	public void activateIntegrity(Mac hMac) {
+		this.hmac = hMac;
+		this.integrity = true;
+	}
+
+	/**
+	 * @param checksum
+	 */
+	public void setChecksum(byte[] checksum) {
+		this.checksum = checksum;
+		this.checksumIsSet = true;
+		this.integrity = true;
 	}
 }

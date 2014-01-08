@@ -6,6 +6,8 @@ package model;
 import java.io.IOException;
 import java.net.InetAddress;
 
+import javax.crypto.Mac;
+
 import server.FileServer;
 import util.SingleServerSocketCommunication;
 
@@ -233,5 +235,4 @@ public class FileServerStatusInfo {
 				+ ", usage=" + usage + ", active=" + active + ", online="
 				+ online + "]";
 	}
-
 }

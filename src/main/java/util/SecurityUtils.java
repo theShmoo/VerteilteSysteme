@@ -28,6 +28,7 @@ import javax.security.auth.login.LoginException;
 import org.bouncycastle.openssl.PEMReader;
 import org.bouncycastle.openssl.PEMWriter;
 import org.bouncycastle.openssl.PasswordFinder;
+import org.bouncycastle.util.encoders.Base64;
 
 /**
  * Utilities for Security Tasks
@@ -74,7 +75,6 @@ public class SecurityUtils {
 	 */
 	public static PrivateKey readPrivateKey(String pathToPrivateKey,
 			final String password) throws LoginException{
-		System.out.println("get private key of "+pathToPrivateKey);
 		PrivateKey privateKey = null;
 		PEMReader in = null;
 		try {
@@ -293,6 +293,7 @@ public class SecurityUtils {
 		ObjectOutputStream os = new ObjectOutputStream(out);
 		os.writeObject(obj);
 		byte[] byteArray = out.toByteArray();
+		byteArray = Base64.encode(byteArray);
 		return byteArray;
 	}
 
@@ -306,6 +307,7 @@ public class SecurityUtils {
 	 * @throws ClassNotFoundException
 	 */
 	public static Object deserialize(byte[] data) throws IOException, ClassNotFoundException {
+		data = Base64.decode(data);
 		ByteArrayInputStream in = new ByteArrayInputStream(data);
 		ObjectInputStream is = new ObjectInputStream(in);
 		try{

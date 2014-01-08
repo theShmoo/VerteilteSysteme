@@ -9,66 +9,45 @@ import java.net.InetAddress;
 public final class DownloadTicket implements Serializable {
 	private static final long serialVersionUID = 289413562241940171L;
 
-	private String username;
-	private String filename;
-	private String checksum;
-	private InetAddress address;
-	private int port;
 
-	public DownloadTicket() {
-	}
+	private DownloadFileRequest info;
+	private RequestTO request;
+	private byte[] checksum;
 
-	public DownloadTicket(String username, String filename, String checksum, InetAddress address, int port) {
-		this.username = username;
-		this.filename = filename;
+
+	/**
+	 * @param request
+	 * @param checksum2
+	 */
+	public DownloadTicket(RequestTO request, byte[] checksum) {
+		this.info = (DownloadFileRequest) request.getRequest();
+		this.request = request;
 		this.checksum = checksum;
-		this.address = address;
-		this.port = port;
 	}
 
-	public String getUsername() {
-		return username;
-	}
-
-	public void setUsername(String username) {
-		this.username = username;
-	}
-
-	public String getFilename() {
-		return filename;
-	}
-
-	public void setFilename(String filename) {
-		this.filename = filename;
-	}
-
-	public String getChecksum() {
+	/**
+	 * @return the checksum
+	 */
+	public byte[] getChecksum() {
 		return checksum;
 	}
-
-	public void setChecksum(String checksum) {
-		this.checksum = checksum;
-	}
-
-	public InetAddress getAddress() {
-		return address;
-	}
-
-	public void setAddress(InetAddress address) {
-		this.address = address;
-	}
-
-	public int getPort() {
-		return port;
-	}
-
-	public void setPort(int port) {
-		this.port = port;
+	
+	/**
+	 * @return the info
+	 */
+	public DownloadFileRequest getInfo() {
+		return info;
 	}
 
 	@Override
 	public String toString() {
-		return String.format("%s@%s:%d/%s#%s", getUsername(), getAddress().getHostAddress(),
-				getPort(), getFilename(), getChecksum());
+		return String.format("%s@%s - %s", info.getFilename(), info.getPort(), new String(checksum));
+	}
+
+	/**
+	 * @return
+	 */
+	public RequestTO getRequest() {
+		return request;
 	}
 }

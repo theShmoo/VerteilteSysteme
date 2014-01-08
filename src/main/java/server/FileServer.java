@@ -29,7 +29,6 @@ import org.bouncycastle.util.encoders.Hex;
 
 import util.Config;
 import util.FileUtils;
-import util.IntegrityUtils;
 import cli.Shell;
 
 /**
@@ -59,7 +58,6 @@ public class FileServer implements Runnable {
 	private List<FileInfo> files;
 	private ServerSocket serverSocket;
 	private Mac hMac;
-	private String hMackeylocation;
 	private Key key;
 
 	/**

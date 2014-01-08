@@ -7,8 +7,8 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.security.PublicKey;
 
-import client.SubscribeService;
 import message.Response;
+import client.SubscribeService;
 
 /**
  * 
@@ -74,7 +74,7 @@ public interface IRMI extends Remote {
 	 *            the name of the user
 	 * @param publicKey
 	 *            the public key of the user
-	 * @return
+	 * @return Response if the key was set
 	 * @throws RemoteException
 	 */
 	public Response setUserPublicKey(String username, PublicKey publicKey)

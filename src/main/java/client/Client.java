@@ -2,8 +2,6 @@ package client;
 
 import java.io.File;
 import java.io.IOException;
-import java.rmi.AccessException;
-import java.rmi.NoSuchObjectException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -148,7 +146,8 @@ public class Client implements IClient, Runnable {
 					shell.writeLine(e1.getMessage());
 				} catch (IOException e2) {
 					System.out.println(e1.getMessage());
-				};
+				}
+				;
 			}
 		}
 	}
@@ -260,14 +259,14 @@ public class Client implements IClient, Runnable {
 	public Response download(DownloadTicket ticket) {
 		SingleServerSocketCommunication clientToFileServer = new SingleServerSocketCommunication(
 				ticket.getInfo().getPort(), proxyHost);
-		
+
 		clientToFileServer.setChecksum(ticket.getChecksum());
 		Response response = clientToFileServer.send(ticket.getRequest());
 
 		if (response instanceof DownloadFileResponse) {
 			DownloadFileResponse download = (DownloadFileResponse) response;
-			FileUtils.write(download.getContent(), downloadDir,
-					ticket.getInfo().getFilename());
+			FileUtils.write(download.getContent(), downloadDir, ticket
+					.getInfo().getFilename());
 			updateFiles();
 		}
 		return response;
@@ -305,8 +304,6 @@ public class Client implements IClient, Runnable {
 		}
 		return file.getVersion();
 	}
-
-	
 
 	/**
 	 * Returns a Base64 encoded encrypted message that contains:
@@ -368,14 +365,28 @@ public class Client implements IClient, Runnable {
 		String[] strs = new String(b64message).split(" ");
 
 		if (strs[1].equals(new String(Base64.encode(clientChallenge)))) {
-			secretKey = strs[3].getBytes();
-			IV = strs[4].getBytes();
-			clientThread.setIV(Base64.decode(IV));
-			clientThread.setKey(Base64.decode(secretKey));
+			secretKey = Base64.decode(strs[3].getBytes());
+			IV = Base64.decode(strs[4].getBytes());
+			clientThread.setIV(IV);
+			clientThread.setKey(secretKey);
 			clientThread.activateSecureConnection();
 			return strs[2].getBytes();
 		}
 		return null;
+	}
+
+	/**
+	 * @return the iv
+	 */
+	public byte[] getIV() {
+		return IV;
+	}
+
+	/**
+	 * @return the secret key (aes)
+	 */
+	public byte[] getSecretKey() {
+		return secretKey;
 	}
 
 	private PrivateKey getPrivateKey(String username, String password)
@@ -491,15 +502,16 @@ public class Client implements IClient, Runnable {
 		}
 		return rmi;
 	}
-	
+
 	/**
 	 * Closes all Threads and shuts down the client
 	 */
 	public void exit() {
-			try {
-				registry.unbind(rmiBindingName);
-				UnicastRemoteObject.unexportObject(rmi, true);
-			} catch (RemoteException | NotBoundException e1) { /* -.- */ }
+		try {
+			registry.unbind(rmiBindingName);
+			UnicastRemoteObject.unexportObject(rmi, true);
+		} catch (RemoteException | NotBoundException e1) { /* -.- */
+		}
 		if (clientThread != null)
 			clientThread.close();
 		try {

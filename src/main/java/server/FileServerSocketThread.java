@@ -16,7 +16,6 @@ import message.response.ListResponse;
 import message.response.MessageResponse;
 import message.response.VersionResponse;
 import model.DownloadFileRequest;
-import model.DownloadTicket;
 import model.FileInfo;
 import model.RequestTO;
 import proxy.Proxy;

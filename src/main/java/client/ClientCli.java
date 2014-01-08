@@ -246,8 +246,12 @@ public class ClientCli implements IClientCli {
 	@Command
 	public Response subscribe(String filename, int number)
 			throws RemoteException {
-		return client.getRmi().subscribe(
+		if(login){
+			return client.getRmi().subscribe(
 				client.createSubscribeNotifier(filename, number), filename, number);
+		} else{
+			return new MessageResponse("No user is authenticated!");
+		}
 	}
 
 	/**

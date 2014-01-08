@@ -39,15 +39,12 @@ import javax.crypto.spec.SecretKeySpec;
 import javax.security.auth.login.LoginException;
 
 import message.Response;
-import message.request.DetailedListRequest;
 import message.request.InfoRequest;
 import message.request.ListRequest;
 import message.request.UploadRequest;
 import message.request.VersionRequest;
-import message.response.DetailedListResponse;
 import message.response.ListResponse;
 import message.response.VersionResponse;
-import model.FileInfo;
 import model.FileServerInfo;
 import model.FileServerStatusInfo;
 import model.RequestTO;
@@ -82,10 +79,9 @@ public class Proxy implements Runnable {
 	private int tcpPort, udpPort;
 	private long fsTimeout, fsCheckPeriod;
 	private Mac hMac;
-	private Key key;
+	private Key hMacKey;
 	private PrivateKey privateKey;
 	private String keyDir;
-	private final String B64 = "a-zA-Z0-9/+";
 
 	private Set<UserLoginInfo> users;
 	private Set<FileServerStatusInfo> fileservers;
@@ -149,7 +145,7 @@ public class Proxy implements Runnable {
 		this.running = true;
 		getProxyData(config);
 
-		createhMAC(key);
+		createhMAC(hMacKey);
 
 		this.proxyTcpHandlers = new ArrayList<ProxyTCPChannel>();
 		// this.fileVersionMap = new ConcurrentHashMap<String, Integer>();
@@ -201,7 +197,7 @@ public class Proxy implements Runnable {
 				fis.read(keyBytes);
 				fis.close();
 				byte[] input = Hex.decode(keyBytes);
-				this.key = new SecretKeySpec(input, "HmacSHA256");
+				this.hMacKey = new SecretKeySpec(input, "HmacSHA256");
 
 			} catch (FileNotFoundException e) {
 				System.out.println("Error in getProxyData: Keyloading 1");
@@ -421,7 +417,6 @@ public class Proxy implements Runnable {
 		}
 	}
 
-
 	/**
 	 * Iterate through all {@link FileServer}s and get the one with the lowest
 	 * usage. This is synchronized because the fileservers may change
@@ -498,24 +493,6 @@ public class Proxy implements Runnable {
 			filenames.addAll(((ListResponse) response).getFileNames());
 		}
 		return filenames;
-	}
-
-	/**
-	 * Returns all files that are available for download as a FileInfo List
-	 * 
-	 * @return all files that are available for download as a FileInfo List
-	 * @throws IOException
-	 *             if the connection does not work
-	 */
-	private Set<FileInfo> getDetailedFiles(
-			SingleServerSocketCommunication sender) throws IOException {
-		sender.activateIntegrity(hMac);
-		Response response = sender.send(new RequestTO(
-				new DetailedListRequest(), RequestType.DetailedList));
-		if (response instanceof DetailedListResponse) {
-			return ((DetailedListResponse) response).getFileInfo();
-		}
-		throw new IOException(response.toString());
 	}
 
 	/**

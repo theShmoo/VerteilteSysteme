@@ -99,7 +99,7 @@ public class Proxy implements Runnable {
 	private ServerSocket serverSocket;
 	private List<ProxyTCPChannel> proxyTcpHandlers;
 	private boolean running;
-	
+
 	// Replication Parameters
 	private List<FileServerStatusInfo> serverList;
 
@@ -197,7 +197,7 @@ public class Proxy implements Runnable {
 			this.udpPort = config.getInt("udp.port");
 			this.fsTimeout = config.getInt("fileserver.timeout");
 			this.fsCheckPeriod = config.getInt("fileserver.checkPeriod");
-//			this.privateKey = SecurityUtils.readPrivateKey(config.getString("key"),"12345");
+			this.privateKey = SecurityUtils.readPrivateKey(config.getString("key"),"12345");
 			this.keyDir = config.getString("keys.dir");
 			byte[] keyBytes = new byte[1024];
 			try {
@@ -220,13 +220,13 @@ public class Proxy implements Runnable {
 				e1.printStackTrace();
 			}
 			close();
-//		} catch (LoginException e1) {
-//			try {
-//				shell.writeLine(e1.getMessage());
-//			} catch (IOException e) {
-//				e.printStackTrace();
-//			}
-//			close();
+		} catch (LoginException e1) {
+			try {
+				shell.writeLine(e1.getMessage());
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			close();
 		}
 		// synchronized Set
 		this.fileservers = Collections
@@ -551,12 +551,12 @@ public class Proxy implements Runnable {
 	 */
 	public Set<String> getFiles() throws IOException {
 		List<FileServerStatusInfo> list = getGiffordsLists().get(0);
-		
+
 		if (list == null) {
 			// TODO maybe not null but Exception
 			return null;
 		}
-		
+
 		Set<String> filenames = new LinkedHashSet<String>();
 		for (int i = 0; i < list.size(); i++) {
 			Response response = list.get(i).getSender().send(
@@ -777,23 +777,25 @@ public class Proxy implements Runnable {
 		if (serverList.size() != 0) {
 			List<FileServerStatusInfo> fnr = getServerWithLowestUsage(serverList);
 			List<FileServerStatusInfo> fnw = getServerWithLowestUsage(serverList);
-	
+
 			// if there not enough servers in the list to fulfil the giffords scheme
 			if (fnw.size() + fnr.size() <= serverList.size()) {
-				int missingServers = serverList.size() - fnw.size() - fnr.size();
+				int missingServers = serverList.size() + 1 - fnw.size() - fnr.size();
 				int count = 0;
-				int j = 0;
-				while (serverList.get(j).getUsage() == fnw.get(0).getUsage()) {
-					j++;
+				float currentUsage = 0;
+				for (int i = 0; i < serverList.size(); i++) {
+					if (serverList.get(i).getUsage() == fnw.get(0).getUsage()) {
+						currentUsage = serverList.get(i).getUsage();
+						break;
+					}
 				}
-				float currentUsage = serverList.get(j).getUsage();
-	
+
 				// add the servers with the second, third, ... lowest usage to the
 				// list until we have enough servers
-				while (count == missingServers) {
+				while (count < missingServers) {
 					for (int i = 0; i < serverList.size(); i++) {
-						if (fnw.get(0).getUsage() < serverList.get(i).getUsage()
-								&& serverList.get(i).getUsage() <= currentUsage) {
+						if (fnw.get(0).getUsage() <= serverList.get(i).getUsage()
+								&& serverList.get(i).getUsage() <= currentUsage && count < missingServers) {
 							fnw.add(serverList.get(i));
 							count++;
 						}
@@ -825,12 +827,18 @@ public class Proxy implements Runnable {
 					usage = quorums.get(i).getUsage();
 				}
 			}
-	
+
 			// get list of servers with lowest usage
+			int full = serverList.size() / 2;
+			if (serverList.size() == 1) {
+				full = serverList.size();
+			}
+			int count = 1;
 			List<FileServerStatusInfo> list = new ArrayList<FileServerStatusInfo>();
 			for (int i = 0; i < quorums.size(); i++) {
-				if (usage == quorums.get(i).getUsage()) {
+				if (usage == quorums.get(i).getUsage() && full >= count) {
 					list.add(quorums.get(i));
+					count++;
 				}
 			}
 			return list;

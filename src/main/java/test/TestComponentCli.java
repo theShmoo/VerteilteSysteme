@@ -14,6 +14,10 @@ public class TestComponentCli {
 
 	private TestComponent testComponent;
 	
+	/**
+	 * Initialize a new TestComponent Command Line
+	 * @param testComponent the TestComponent
+	 */
 	public TestComponentCli(TestComponent testComponent) {
 		this.testComponent = testComponent;
 	}

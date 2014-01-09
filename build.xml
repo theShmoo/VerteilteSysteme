@@ -61,6 +61,10 @@
 	<target name="run-client" depends="compile" description="Run client.">
 		<java classname="client.Client" fork="true" classpathref="project.classpath" />
 	</target>
+	
+	<target name="run-testComponent" depends="compile" description="Run testComponent.">
+		<java classnamae="test.TestComponent" fort="true" classpathref="project.classpath" />
+	</target>
 
 	<target name="clean" description="Clean build products.">
 		<delete dir="${build.dir}" />

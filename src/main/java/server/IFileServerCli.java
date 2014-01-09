@@ -36,4 +36,10 @@ public interface IFileServerCli {
 	 */
 	@Command
 	MessageResponse exit() throws IOException;
+
+	/**
+	 * Change the download directory of the fileserver
+	 * @param directory the directory
+	 */
+	void changeDirectory(String directory);
 }

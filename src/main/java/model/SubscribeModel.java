@@ -35,9 +35,10 @@ public class SubscribeModel {
 	 */
 	public void addDownload(){
 		currentNumber++;
-		if(currentNumber == number){
+		if(currentNumber >= number){
 			try {
 				subscribe.invoke();
+				currentNumber = 0;
 			} catch (RemoteException e) {
 				e.printStackTrace();
 			}

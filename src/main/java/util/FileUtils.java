@@ -6,6 +6,8 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.util.Random;
 
 /**
  * Utilities for file operations
@@ -118,5 +120,86 @@ public class FileUtils {
 		return file.isFile();
 	}
 
+	/**
+	 * Creates a new Temporary Directory
+	 * 
+	 * @param dirname
+	 *            the name of the directory
+	 * @return the Created Temp Directory
+	 * @throws IOException
+	 */
+	public static File createTempDirectory(String dirname) throws IOException {
+		final File temp;
+		temp = new File("temp"+File.separator+dirname, Long.toString(System.nanoTime()));
+		temp.mkdirs();
+		temp.deleteOnExit();
+		return (temp);
+	}
+
+	/**
+	 * @param fileSizeKB
+	 *            the size of the file in KB
+	 * @param f
+	 *            the directory
+	 * @return the file destination
+	 * @throws IOException
+	 */
+	public static File createRandomFile(int fileSizeKB, File f)
+			throws IOException {
+		f.createNewFile();
+		File temp = new File(f,Long.toString(System.nanoTime())+".txt");
+		temp.createNewFile();
+		RandomAccessFile rand = new RandomAccessFile(temp, "rw");
+		rand.setLength(fileSizeKB * 1024);
+		byte[] r = new byte[fileSizeKB * 1024]; //dont fill whole file
+		new Random().nextBytes(r);
+		rand.writeBytes(new String(r));
+		rand.close();
+		temp.deleteOnExit();
+		return temp;
+	}
+
+	/**
+	 * Copies one file to an other destination
+	 * 
+	 * @param sourceFile
+	 * @param destinationFile
+	 */
+	public static synchronized void copyFile(File sourceFile,
+			File destinationFile) {
+		try {
+			FileInputStream fileInputStream = new FileInputStream(sourceFile);
+			FileOutputStream fileOutputStream = new FileOutputStream(
+					destinationFile);
+
+			int bufferSize;
+			byte[] bufffer = new byte[512];
+			while ((bufferSize = fileInputStream.read(bufffer)) > 0) {
+				fileOutputStream.write(bufffer, 0, bufferSize);
+			}
+			fileInputStream.close();
+			fileOutputStream.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 	
+	/**
+	 * Deletes Folder
+	 * @param folder the folder
+	 */
+	public static void deleteFolder(File folder) {
+	    File[] files = folder.listFiles();
+	    if(files!=null) { //some JVMs return null for empty dirs
+	        for(File f: files) {
+	            if(f.isDirectory()) {
+	                deleteFolder(f);
+	            } else {
+	                f.delete();
+	            }
+	        }
+	    }
+	    folder.delete();
+	}
+
 }

@@ -30,4 +30,12 @@ public class FileServerCli implements IFileServerCli {
 		return new MessageResponse("Shutting down file server now");
 	}
 
+	/* (non-Javadoc)
+	 * @see server.IFileServerCli#changeDirectory(java.lang.String)
+	 */
+	@Override
+	public void changeDirectory(String directory) {
+		server.changeDirectory(directory);
+	}
+
 }

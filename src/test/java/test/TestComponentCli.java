@@ -24,17 +24,22 @@ public class TestComponentCli {
 	
 	@Command
 	public void upload(String filename) {
-		testComponent.uploadFiles(filename);
+		testComponent.startUploadingFiles();
 	}
 	
 	@Command 
 	public void download(String filename) {
-		testComponent.downloadFiles(filename);
+		testComponent.startDownloadFiles(filename);
 	}
 	
 	@Command
 	public Response subscribe(String filename, int downloadFileNr) {
 		return testComponent.subscribe(filename, downloadFileNr);
+	}
+	
+	@Command
+	public void exit(){
+		testComponent.close();
 	}
 	
 }

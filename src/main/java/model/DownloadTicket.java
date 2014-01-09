@@ -1,7 +1,6 @@
 package model;
 
 import java.io.Serializable;
-import java.net.InetAddress;
 
 /**
  * Contains information required to download files from a {@link server.IFileServer}.

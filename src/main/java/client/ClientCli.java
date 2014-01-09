@@ -306,4 +306,12 @@ public class ClientCli implements IClientCli {
 		return new MessageResponse(exitMessage.toString());
 	}
 
+	/**
+	 * Change the Download Directory of the user
+	 * @param directory 
+	 */
+	public void changeDownloadDir(String directory) {
+		client.changeDownloadDir(directory);
+	}
+
 }

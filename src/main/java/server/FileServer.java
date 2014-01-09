@@ -409,4 +409,11 @@ public class FileServer implements Runnable {
 	public Mac getHMac() {
 		return this.hMac;
 	}
+
+	/**
+	 * @param directory
+	 */
+	public void changeDirectory(String directory) {
+		this.folder = new File(directory);
+	}
 }

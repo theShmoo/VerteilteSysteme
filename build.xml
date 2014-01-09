@@ -30,21 +30,21 @@
 	</target>
 
 	<target name="test" description="Test the solution" depends="compile">
-		<mkdir dir="${reports.dir}" />
-		<junit includeantruntime="true" logfailedtests="true" showoutput="true" printsummary="true">
-			<classpath refid="project.classpath" />
-			<formatter type="plain" />
-			<batchtest fork="false" todir="${reports.dir}">
-				<fileset dir="${test.src.dir}">
-					<include name="**/*Test.java" />
-				</fileset>
-			</batchtest>
-		</junit>
-	</target>
+			<mkdir dir="${reports.dir}" />
+			<junit includeantruntime="true" logfailedtests="true" showoutput="true" printsummary="true">
+				<classpath refid="project.classpath" />
+				<formatter type="plain" />
+				<batchtest fork="false" todir="${reports.dir}">
+					<fileset dir="${test.src.dir}">
+						<include name="**/*Test.java" />
+					</fileset>
+				</batchtest>
+			</junit>
+		</target>
 
 	<target name="run-proxy" depends="compile" description="Run proxy.">
-		<java classname="proxy.Proxy" fork="true" classpathref="project.classpath" />
-	</target>
+			<java classname="proxy.Proxy" fork="true" classpathref="project.classpath" />
+		</target>
 	
 	<target name="run-fileserver1" depends="compile" description="Run 1st fileserver.">
 	    <java classname="server.FileServer" fork="true" classpathref="project.classpath">
@@ -63,7 +63,7 @@
 	</target>
 	
 	<target name="run-testComponent" depends="compile" description="Run testComponent.">
-		<java classnamae="test.TestComponent" fort="true" classpathref="project.classpath" />
+		<java classname="test.TestComponent" fork="true" classpathref="project.classpath" />
 	</target>
 
 	<target name="clean" description="Clean build products.">

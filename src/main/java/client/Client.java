@@ -2,6 +2,7 @@ package client;
 
 import java.io.File;
 import java.io.IOException;
+import java.rmi.AccessException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -509,9 +510,12 @@ public class Client implements IClient, Runnable {
 	public void exit() {
 		try {
 			registry.unbind(rmiBindingName);
-			UnicastRemoteObject.unexportObject(rmi, true);
-		} catch (RemoteException | NotBoundException e1) { /* -.- */
+			UnicastRemoteObject.unexportObject(rmi, true); 
+		} catch (AccessException e1) {
+		} catch (RemoteException e1) {
+		} catch (NotBoundException e1) {
 		}
+		
 		if (clientThread != null)
 			clientThread.close();
 		try {
@@ -523,5 +527,13 @@ public class Client implements IClient, Runnable {
 			shellThread.interrupt();
 		if (shell != null)
 			shell.close();
+	}
+
+	/**
+	 * @param directory
+	 */
+	public void changeDownloadDir(String directory) {
+		this.downloadDir = directory;
+		this.folder = new File(directory);
 	}
 }

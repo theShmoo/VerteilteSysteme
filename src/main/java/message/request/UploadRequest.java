@@ -1,10 +1,8 @@
 package message.request;
 
-import message.Request;
-
 import java.nio.charset.Charset;
 
-import util.IntegrityUtils;
+import message.Request;
 
 /**
  * Uploads the file with the given name.

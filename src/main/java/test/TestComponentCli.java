@@ -19,9 +19,18 @@ public class TestComponentCli {
 	}
 	
 	@Command
+	public void upload(String filename) {
+		testComponent.uploadFiles(filename);
+	}
+	
+	@Command 
+	public void download(String filename) {
+		testComponent.downloadFiles(filename);
+	}
+	
+	@Command
 	public Response subscribe(String filename, int downloadFileNr) {
-		//TODO
-		return null;
+		return testComponent.subscribe(filename, downloadFileNr);
 	}
 	
 }

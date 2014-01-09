@@ -4,6 +4,7 @@
 package test;
 
 import java.io.IOException;
+import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -15,6 +16,8 @@ import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import message.Response;
+import message.response.MessageResponse;
 import proxy.IProxyCli;
 import server.IFileServerCli;
 import util.ComponentFactory;
@@ -22,6 +25,7 @@ import util.Config;
 import cli.Shell;
 import cli.TestInputStream;
 import cli.TestOutputStream;
+import client.ClientCli;
 import client.IClientCli;
 
 /**
@@ -44,7 +48,7 @@ public class TestComponent {
 
 	private IProxyCli proxy;
 	private Set<IFileServerCli> serverSet;
-	private Set<IClientCli> clientSet;
+	private Set<ClientCli> clientSet;
 	private List<String> userList;
 	private Map<String, String> users;
 
@@ -70,31 +74,28 @@ public class TestComponent {
 		userList = new ArrayList<String>();
 		userList.add("alice");
 		userList.add("bill");
-		//users = new HashMap<>();
+		users = new HashMap<>();
 		users.put("alice", "12345");
 		users.put("bill", "23456");
 
+		//starting the components
 		startProxy();
 		createClients(clients);
 		startFileServers();
 		loginUser(clients);
 		
-		timer.schedule(new TimerTask() {
-			
-			@Override
-			public void run() {
-				uploadFiles();
-				
-			}
-		}, 0, (long) uploadsPerMin);
+		//downloads and uploads
+		uploadFiles("long.txt");
+		downloadFiles("data.txt");
 		
 		timer.schedule(new TimerTask() {
 			
 			@Override
 			public void run() {
-				downloadFiles();
+				close();
 			}
-		}, 0, (long) downloadsPerMin);
+		}, 10000);
+//		close();
 	}
 
 	private void getTestComponentData(Config config) {
@@ -130,10 +131,10 @@ public class TestComponent {
 
 	private void createClients(int clients) {
 		int count = 1;
-		clientSet = new HashSet<IClientCli>();
+		clientSet = new HashSet<ClientCli>();
 		while (count <= clients) {
 			try {
-				clientSet.add(factory.startClient(new Config("client"), new Shell("client", new TestOutputStream(System.out), new TestInputStream())));
+				clientSet.add((ClientCli)factory.startClient(new Config("client"), new Shell("client", new TestOutputStream(System.out), new TestInputStream())));
 				count++;
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
@@ -158,48 +159,97 @@ public class TestComponent {
 
 	private void loginUser(int clients) {
 		int count = 0;
-		for (IClientCli cli : clientSet) {
+		for (ClientCli cli : clientSet) {
 			String username = userList.get(count);
-			try {
-				cli.login(username, users.get(username));
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			cli.login(username, users.get(username));
 			count++;
 		}
 	}
 	
-	private void uploadFiles() {
-		for (IClientCli cli : clientSet) {
-			try {
-				System.out.println(cli.upload("long.txt"));
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+	public void uploadFiles(final String filename) {
+		timer.schedule(new TimerTask() {
+
+			@Override
+			public void run() {
+				for (ClientCli cli : clientSet) {
+					try {
+						System.out.println(cli.upload(filename));
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
 			}
-		}
+		}, 0, uploadsPerMin * 10000 / 60);
+	}
+	
+	public void downloadFiles(final String filename) {
+		timer.schedule(new TimerTask() {
+
+			@Override
+			public void run() {
+				for (IClientCli cli : clientSet) {
+					try {
+						System.out.println(cli.download(filename));
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+			}
+		}, 0, downloadsPerMin * 10000 / 60);
 	}
 
-	private void downloadFiles() {
-		for (IClientCli cli : clientSet) {
-			try {
-				System.out.println(cli.download("data.txt"));
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+	public Response subscribe(String filename, int downloadFileNr) {
+		try {
+			return clientSet.iterator().next().subscribe(filename, downloadFileNr);
+		} catch (RemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
+		return new MessageResponse("Subscribe failed.");
 	}
 
 	public void close() {
 		if (executor != null)  {
 			executor.shutdown();
+		} 
+		if (timer != null) {
+			timer.cancel();
+		}
+		if (executor != null) {
+			executor.shutdownNow();
 		}
 		if (shell != null) {
 			shell.close();
-		} if (timer != null) {
-			timer.cancel();
+		}
+		if (proxy != null) {
+			try {
+				proxy.exit();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		if (clientSet != null) {
+			for (ClientCli client : clientSet) {
+				try {
+					client.exit();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+		if (serverSet != null) {
+			for (IFileServerCli server : serverSet) {
+				try {
+					server.exit();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
 		}
 	}
 }

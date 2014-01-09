@@ -7,7 +7,6 @@ DS Lab 2
 bestehend aus:
 * Rauscha Astrid (1027444)
 * Pfahler David (1126287)
-* Weinberger Peter (0825235)
 
 ##Dokumentationsrichtlinien
 ###GIT Commits
